@@ -7,11 +7,10 @@ services:
     command: bash -c "uvicorn main:app --host=0.0.0.0 --port 8000 --reload --log-level=info"
     volumes:
       - ./backend:/backend
-#      - /migrations:/backend/database/alembic/versions
     ports:
       - "8000:8000"
-#    depends_on:
-#      - db
+    depends_on:
+      - db
 #    environment:
 ##      APP_URL: ${APP_URL}
 #      S3_ACCESS: ${S3_ACCESS}
@@ -24,11 +23,12 @@ services:
 #      POSTGRES_PASS: ${POSTGRES_PASS_DEV}
 #    networks:
 #      - nginx-proxy
+
   db:
     image: postgres:14.2
     restart: always
 #    ports:
-#      - "48425:5432"
+#      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
@@ -41,3 +41,6 @@ services:
 
 volumes:
   pgdata:
+
+#networks:
+#  nginx-proxy:
