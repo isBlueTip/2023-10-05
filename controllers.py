@@ -22,7 +22,7 @@ db = DatabaseAccess(
 )
 
 
-class ResourceTypeController:
+class BaseDBController:
     def __init__(
         self,
         db_service: ResourceTypeService,
@@ -40,9 +40,9 @@ class ResourceTypeController:
     def create_tables():
         with db.connect() as conn:
             cur = conn.cursor()
-            # check if db already populated
+            # check if tables in db already exist
             cur.execute(
-                '''
+                """
             SELECT 
               EXISTS (
                 SELECT 
@@ -51,14 +51,12 @@ class ResourceTypeController:
                 WHERE 
                   table_name = 'resource_type'
               );
-                   '''
+                   """
             )
             exists = cur.fetchone()[0]
             if not exists:
-                print('not exists')
-                print('')
                 cur.execute(
-                    '''
+                    """
                 CREATE TABLE resource_type (
                   id serial PRIMARY KEY, name varchar NOT NULL UNIQUE, 
                   max_speed int NOT NULL, created_at timestamp DEFAULT NOW()
@@ -71,13 +69,14 @@ class ResourceTypeController:
                   current_speed int, 
                   created_at timestamp DEFAULT NOW()
                 );
-                '''
+                """
                 )
                 # todo add fixtures
                 conn.commit()
             cur.close()
-            conn.close()
 
+
+class ResourceTypeController(BaseDBController):
     def list_resource_types(self) -> List[ResourceType]:
         resource_types = self.db_service.get_all_resource_types()
         return resource_types
@@ -89,41 +88,42 @@ class ResourceTypeController:
         return resource_type
 
     def create(self) -> ResourceType | None:
-
-        print(f'self.req_body = {self.req_body}')
-        print('')
-
-        # create ResourceType object and send its data to connection
+        # validate request data
         if not self.req_body:
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "body contains zero data")
-        name = self.req_body.get('name')
-        max_speed = self.req_body.get('max_speed')
-        if not all((name, max_speed)):
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "body doesn't contain some data")
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains zero data")
+        name = self.req_body.get("name")
+        max_speed = int(self.req_body.get("max_speed"))
 
-        # todo validate! but where?
+        if not name:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify name")
+        if not max_speed:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify max_speed")
+        if max_speed <= 0:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "max_speed can't be less than one")
+
+        # create ResourceType object and send its data to db connection
         obj = ResourceType(name=name, max_speed=max_speed)
         with db.connect() as conn:
             cur = conn.cursor()
-            print('before executing')
             try:
-                # 1/0
                 cur.execute(
-                    f'''
+                    f"""
                 INSERT INTO resource_type (name, max_speed) 
                 VALUES 
                   (%s, %s); 
-                ''',
+                """,
                     (obj.name, obj.max_speed),
                 )
-
             except psycopg2.Error as e:
-                print('')
-                print(f'error code = {e.pgcode}')
-                print('')
-                if e.pgcode == '23505':
-                    raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail="already exists")
+                print("")
+                print(f"error code = {e.pgcode}")
+                print("")
+                if e.pgcode == "23505":
+                    raise HTTPException(
+                        status_code=http.HTTPStatus.BAD_REQUEST, detail=f"{obj.name} already exists"
+                    ) from e
             conn.commit()
+            cur.close()
         return obj
 
     def update_resource_type(self, resource_type_id: int, resource_type: ResourceType) -> ResourceType:
@@ -138,41 +138,28 @@ class ResourceTypeController:
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource type not found")
 
 
-class ResourceController:
-    def __init__(
-        self,
-        service: ResourceService,  # todo do I need to pass a ResourceService instance here?
-        path: str,  # request path
-        # todo naming - body?
-        payload: dict = None,  # data from post if exist
-        url_args: dict = None,  # data from url - filter, anything else?
-    ):
-        self.service = service
-        self.path = path
-        self.payload = payload
-        self.url_args = url_args
-
+class ResourceController(BaseDBController):
     def list_resources(self) -> List[Resource]:
-        resources = self.service.list_resources()
+        resources = self.db_service.list_resources()
         return resources
 
     def get_resource(self, resource_id: int) -> Resource:
-        resource = self.service.get_resource(resource_id)
+        resource = self.db_service.get_resource(resource_id)
         if not resource:
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource not found")
         return resource
 
     def create_resource(self, resource: Resource) -> Resource:
-        created_resource = self.service.create_resource(resource)
+        created_resource = self.db_service.create_resource(resource)
         return created_resource
 
     def update_resource(self, resource_id: int, resource: Resource) -> Resource:
-        updated_resource = self.service.update_resource(resource_id, resource)
+        updated_resource = self.db_service.update_resource(resource_id, resource)
         if not updated_resource:
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource not found")
         return updated_resource
 
     def delete_resource(self, resource_id: int) -> None:
-        deleted = self.service.delete_resource(resource_id)
+        deleted = self.db_service.delete_resource(resource_id)
         if not deleted:
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource not found")
