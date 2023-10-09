@@ -107,6 +107,7 @@
 # /*************************************************************/
 
 import asyncio
+import http
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -115,9 +116,9 @@ from urllib.parse import parse_qs, urlparse
 
 import ipdb
 
-from controllers.resource_controller import ResourceController
-from controllers.resource_type_controller import ResourceTypeController
+from controllers import ResourceController, ResourceTypeController
 from db.models import Resource, ResourceType
+from exceptions import HTTPException
 
 # import ipdb
 from services.resource_service import ResourceService
@@ -133,6 +134,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     """
     Main router for the app
     """
+
     # todo redefine __init__ to rstrip url there
     # def __init__(self, *args, **kwargs):
     #     self.parsed_url = urlparse(self.path, scheme=URL_SCHEME)
@@ -143,12 +145,19 @@ class RequestHandler(BaseHTTPRequestHandler):
     #     super().__init__(*args, **kwargs)
 
     def parse_request(self, *args, **kwargs):
-        super().parse_request()
+        if not super().parse_request():  # follow the parent method
+            return False
         self.parsed_url = urlparse(self.path, scheme=URL_SCHEME)
         self.path = self.parsed_url.path.rstrip('/')
-        self.req_body = 0
         self.url_params = parse_qs(self.parsed_url.query)
-        ipdb.set_trace()
+        body_len = int(self.headers.get('Content-Length'))
+        bytes_body = self.rfile.read(body_len)
+
+        try:
+            self.req_body = json.loads(bytes_body.decode())
+        except Exception:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, detail="bad body data")
+        return True  # follow the parent method
 
     def do_GET(self):
         print(f'self.command = {self.command}')  # GET
@@ -192,7 +201,13 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         elif self.path == '/resource_types':
             print("POST /resource_types")
-            # db_res = ResourceTypeController(db_service=resource_type_service, path=self.path, req_body=self.req_body, url_args=self.url_params)
+            controller = ResourceTypeController(
+                db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
+            )
+            print(f'controller = {controller}')
+            res = controller.create()
+
+            print(f'result to send in main = {res}')
 
             # result_to_send = obj.prepare_response  # todo serialize result from db
         else:
