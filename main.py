@@ -1,7 +1,21 @@
-# import json
-# from urllib.parse import urlparse, parse_qs
-# from wsgiref.simple_server import make_server
-#
+import asyncio
+import http
+import json
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pprint import pprint
+from urllib.parse import parse_qs, urlparse
+from wsgiref.simple_server import make_server
+
+import ipdb
+
+from controllers import ResourceController, ResourceTypeController
+from db.models import Resource, ResourceType
+from exceptions import HTTPException
+from services.resource_service import ResourceService
+from services.resource_type_service import ResourceTypeService
+from views import ResourceSerializer, ResourceTypeSerializer
+
 # # Mock database data (in-memory)
 # resources = [
 #     {"id": 1, "name": "Resource1", "type": "Type1", "speed": 60},
@@ -104,27 +118,7 @@
 # #     import uvicorn
 # #     uvicorn.run(app, host="0.0.0.0", port=8000)
 
-# /*************************************************************/
-
-import asyncio
-import http
-import json
-from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from pprint import pprint
-from urllib.parse import parse_qs, urlparse
-
-import ipdb
-
-from controllers import ResourceController, ResourceTypeController
-from db.models import Resource, ResourceType
-from exceptions import HTTPException
-
-# import ipdb
-from services.resource_service import ResourceService
-from services.resource_type_service import ResourceTypeService
-
-URL_SCHEME = 'scheme://path;parameters?query#fragment'
+URL_SCHEME = "scheme://path;parameters?query#fragment"
 
 resource_service = ResourceService()
 resource_type_service = ResourceTypeService()
@@ -135,22 +129,19 @@ class RequestHandler(BaseHTTPRequestHandler):
     Main router for the app
     """
 
-    # todo redefine __init__ to rstrip url there
-    # def __init__(self, *args, **kwargs):
-    #     self.parsed_url = urlparse(self.path, scheme=URL_SCHEME)
-    #     self.path = self.parsed_url.path.rstrip('/')
-    #     self.req_body = 0
-    #     self.query_params = parse_qs(self.parsed_url.query)
-    #
-    #     super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        self.parsed_url = ""
+        self.url_params = {}
+        self.req_body = {}
+        super().__init__(*args, **kwargs)
 
     def parse_request(self, *args, **kwargs):
         if not super().parse_request():  # follow the parent method
             return False
         self.parsed_url = urlparse(self.path, scheme=URL_SCHEME)
-        self.path = self.parsed_url.path.rstrip('/')
+        self.path = self.parsed_url.path.rstrip("/")
         self.url_params = parse_qs(self.parsed_url.query)
-        body_len = int(self.headers.get('Content-Length'))
+        body_len = int(self.headers.get("Content-Length"))
         bytes_body = self.rfile.read(body_len)
 
         try:
@@ -160,125 +151,80 @@ class RequestHandler(BaseHTTPRequestHandler):
         return True  # follow the parent method
 
     def do_GET(self):
-        print(f'self.command = {self.command}')  # GET
-        print(f'self.path = {self.path}')  # /resources/5/?token=121/
-        print(f'parsed_url = {self.parsed_url}')  # ParseResult(...)
-        print(f'path = {self.path}')  # /resources/5
-        print(f'')
-        print(f'parsed_url.query = {self.parsed_url.query}')  # token=121/
-        print(f'')
-        print(f'query_params = {self.url_params}')  # {'token': ['121/']}
+        print(f"self.command = {self.command}")  # GET
+        print(f"self.path = {self.path}")  # /resources/5/?token=121/
+        print(f"parsed_url = {self.parsed_url}")  # ParseResult(...)
+        print(f"path = {self.path}")  # /resources/5
+        print(f"")
+        print(f"parsed_url.query = {self.parsed_url.query}")  # token=121/
+        print(f"")
+        print(f"query_params = {self.url_params}")  # {'token': ['121/']}
 
         # resources
-        if self.path == '/resources':
-            print('/resources')
-        elif self.path.startswith('/resources/'):
-            print('/resources/')
+        if self.path == "/resources":
+            print("/resources")
+        elif self.path.startswith("/resources/"):
+            print("/resources/")
             # todo try if int else 404
-            resource_id = int(self.path.split('/')[-1])
-            print(f'resource_id = {resource_id}')
+            resource_id = int(self.path.split("/")[-1])
+            print(f"resource_id = {resource_id}")
 
         # resource_types
-        elif self.path == '/resource_types':
-            print('/resource_types')
-        elif self.path.startswith('/resource_types/'):
-            print('/resource_types/')
-            resource_type_id = int(self.path.split('/')[-1])
-            print(f'resource_type_id = {resource_type_id}')
+        elif self.path == "/resource_types":
+            print("/resource_types")
+        elif self.path.startswith("/resource_types/"):
+            print("/resource_types/")
+            resource_type_id = int(self.path.split("/")[-1])
+            print(f"resource_type_id = {resource_type_id}")
         else:
             self.send_response(HTTPStatus.NOT_FOUND)  # todo example of responding
             self.end_headers()
 
     def do_POST(self):
-        print(f'self.path = {self.path}')
-
-        if self.path == '/resources':
+        if self.path == "/resources":
             print("POST /resources")
-            obj = Resource(name=1, current_speed=1, resource_type=None)
             # res = CONTROLLER.create_resource(obj)
             # print(res)
-            # return res
+            # return
 
-        elif self.path == '/resource_types':
+            #         controller = ResourceController(self)
+            #         controller.handle_request()
+
+        elif self.path == "/resource_types":
+
+            #         # Create an instance of the ResourceController and handle resource-related routes
+            #         controller = ResourceController(self)
+            #         controller.handle_request()
             print("POST /resource_types")
             controller = ResourceTypeController(
                 db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
             )
-            print(f'controller = {controller}')
-            res = controller.create()
+            try:
+                res = controller.create()
+            except HTTPException as e:
+                # self.send_error(code=e.status_code, message=e.detail)
+                self.send_response(code=http.HTTPStatus.BAD_REQUEST)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(f"{e.detail}".encode())
+                return
 
-            print(f'result to send in main = {res}')
-
-            # result_to_send = obj.prepare_response  # todo serialize result from db
-        else:
-            self.send_response(HTTPStatus.NOT_FOUND)
+            serializer = ResourceTypeSerializer(res)
+            response_string = serializer.serialize()
+            self.send_response(code=http.HTTPStatus.CREATED)
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
+            self.wfile.write(response_string.encode())
 
-    # def do_GET(self):
-    #     # if self.path == '/':
-    #     #     # Handle the root path, if needed
-    #     #     pass
-    #     if self.path.startswith('/resources'):
-    #         # Create an instance of the ResourceController and handle resource-related routes
-    #         controller = ResourceController(self)
-    #         controller.handle_request()
-    #     elif self.path.startswith('/resource_types'):
-    #         # Create an instance of the ResourceTypeController and handle resource type-related routes
-    #         resource_type_controller = ResourceTypeController(self)
-    #         resource_type_controller.handle_request()
-    #     else:
-    #         self.send_response(HTTPStatus.NOT_FOUND)
-    #         self.send_header('Content-type', 'text/html')
-    #         self.end_headers()
-    #         self.wfile.write(b'Not Found')
-    #
-    # # def do_GET(self):
-    # #     if self.path == '/':
-    # #         self.send_response(HTTPStatus.OK)
-    # #         self.send_header('Content-type', 'application/json')
-    # #         self.end_headers()
-    # #         response = {'message': 'Welcome to My Web App!'}
-    # #         self.wfile.write(json.dumps(response).encode('utf-8'))
-    # #     # GET
-    # #     elif self.path == '/resources/<id>':
-    # #         pass
-    # #     # LIST
-    # #     elif self.path == '/resources':
-    # #         pass
-    # #     # GET
-    # #     elif self.path == '/resource_types':
-    # #         pass
-    # #     # LIST
-    # #     elif self.path == '/resource_types/<id>':
-    # #         pass
-    # #     # 404
-    # #     else:
-    # #         self.send_response(HTTPStatus.NOT_FOUND)
-    # #         self.send_header('Content-type', 'text/html')
-    # #         self.end_headers()
-    # #         self.wfile.write(b'Not Found')
-    #
-    # def do_POST(self):
-    #     # if self.path == '/':
-    #     #     self.send_response(HTTPStatus.OK)
-    #     #     self.send_header('Content-type', 'application/json')
-    #     #     self.end_headers()
-    #     #     response = {'message': 'Welcome to My Web App!'}
-    #     #     self.wfile.write(json.dumps(response).encode('utf-8'))
-    #     # elif self.path == '/resource':
-    #     #     pass
-    #     # elif self.path == '/resource_type':
-    #     #     pass
-    #     # else:
-    #     #     self.send_response(HTTPStatus.NOT_FOUND)
-    #     #     self.send_header('Content-type', 'text/html')
-    #     #     self.end_headers()
-    #     #     self.wfile.write(b'Not Found')
-    #     pass
+        # Resource not found
+        else:
+            self.send_response(code=HTTPStatus.NOT_FOUND)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
 
 
 def create_app():
-    return HTTPServer(('0.0.0.0', 8000), RequestHandler)
+    return HTTPServer(("0.0.0.0", 8000), RequestHandler)
 
 
 # if __name__ == '__main__':
