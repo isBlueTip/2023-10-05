@@ -7,6 +7,9 @@ class ResourceType:
         self.name = name
         self.max_speed = max_speed
 
+    def __str__(self):
+        return f"{self.name}"
+
 
 @dataclass
 class Resource:
@@ -14,3 +17,6 @@ class Resource:
         self.name = name
         self.resource_type = resource_type
         self.current_speed = current_speed
+
+    def __str__(self):
+        return f"{self.name}"
