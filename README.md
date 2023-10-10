@@ -26,6 +26,21 @@ uvicorn main:app --host=0.0.0.0 --port 8000 --reload --log-level=info
 Для GET `/resources`, для фильтрации результата также принимаются аргументы вида `resources/?type=1,2`, где `1,2` - ID типов ресурсов.  
 Для DELETE, для удаления нескольких записей БД, принимаются аргументы вида `resources/?id=1,2`, где `1,2` - ID записей к удалению. 
 
+json для инициализации типа ресурса:
+```json
+{
+  "name": "excavator",
+  "max_speed": 50
+}
+```
+json для инициализации ресурса:
+```json
+{
+  "name": "E123",
+  "current_speed": 0,
+  "resource_type_id": 8
+}
+```
 
 ## Стек
 
