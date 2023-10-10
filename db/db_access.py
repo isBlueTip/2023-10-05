@@ -1,14 +1,10 @@
 import random
 from contextlib import contextmanager
-from pprint import pprint
 from typing import Tuple
 
 import psycopg2
-from ipdb import set_trace
 
 import exceptions
-
-from . import models
 
 
 class DatabaseAccess:

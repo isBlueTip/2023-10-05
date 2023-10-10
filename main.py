@@ -2,10 +2,7 @@ import asyncio
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from pprint import pprint
 from urllib.parse import parse_qs, urlparse
-
-from ipdb import set_trace
 
 import exceptions
 from controllers import ResourceController, ResourceTypeController
