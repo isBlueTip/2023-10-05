@@ -13,7 +13,7 @@ class ResourceType:
 @dataclass
 class Resource:
     name: str
-    resource_type: int
+    resource_type_id: int
     current_speed: int
 
     def __str__(self):

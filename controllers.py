@@ -1,3 +1,4 @@
+import dataclasses
 import http
 from abc import ABC, abstractmethod
 from http import HTTPStatus
@@ -64,7 +65,7 @@ class BaseDBController(ABC):
                 CREATE TABLE resource (
                   id serial PRIMARY KEY, 
                   name varchar NOT NULL UNIQUE, 
-                  type_id int REFERENCES resource_type(id), 
+                  resource_type_id int REFERENCES resource_type(id), 
                   current_speed int, 
                   created_at timestamp DEFAULT NOW()
                 );
@@ -111,39 +112,20 @@ class ResourceTypeController(BaseDBController):
         if not self.req_body:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
         name = self.req_body.get("name")
-        max_speed = int(self.req_body.get("max_speed"))
+        max_speed = self.req_body.get("max_speed")
 
         if not name:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify name")
         if not max_speed:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify max_speed")
-        if max_speed <= 0:
+        if int(max_speed) <= 0:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "max_speed can't be less than one")
 
         # create ResourceType object and send its data to db connection
         obj = ResourceType(name=name, max_speed=max_speed)
-        with db.connect() as conn:
-            cur = conn.cursor()
-            # trying to insert new record
-            try:
-                cur.execute(
-                    f"""
-                INSERT INTO resource_type (name, max_speed) 
-                VALUES 
-                  (%s, %s); 
-                """,
-                    (obj.name, obj.max_speed),
-                )
-            except psycopg2.Error as e:
-                # can't access error codes via psycopg2 lib; have to hardcode
-                if e.pgcode == "23505":  # if record already exists
-                    raise HTTPException(
-                        status_code=http.HTTPStatus.BAD_REQUEST, detail=f"{obj.name} already exists"
-                    ) from e
-                else:  # other type of error
-                    raise
-            conn.commit()  # no errors; commit changes and return created object
-            cur.close()
+
+        db.create_record("resource_type", dataclasses.asdict(obj))
+
         return obj
 
     def update_resource_type(self, resource_type_id: int, resource_type: ResourceType) -> ResourceType:
@@ -187,36 +169,10 @@ class ResourceController(BaseDBController):
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "current_speed can't be negative")
 
         # create Resource object and send its data to db connection
-        obj = Resource(name=name, resource_type=resource_type, current_speed=current_speed)
-        with db.connect() as conn:
-            cur = conn.cursor()
-            # trying to insert new record
-            try:
-                cur.execute(
-                    f"""
-                INSERT INTO resource (name, type_id, current_speed) 
-                VALUES 
-                  (%s, %s, %s); 
-                """,
-                    (obj.name, obj.resource_type, obj.current_speed),
-                )
-            except psycopg2.Error as e:
-                print("")
-                print(f"error code = {e.pgcode}")
-                print("")
-                # can't access error codes via psycopg2 lib; have to hardcode
-                if e.pgcode == "23505":  # if record already exists
-                    raise HTTPException(
-                        status_code=http.HTTPStatus.BAD_REQUEST, detail=f"{obj.name} already exists"
-                    ) from e
-                if e.pgcode == "23503":  # can't find resource_type
-                    raise HTTPException(
-                        status_code=http.HTTPStatus.BAD_REQUEST, detail=f"can't find resource_type with given id"
-                    ) from e
-                else:  # other type of error
-                    raise
-            conn.commit()  # no errors; commit changes and return created object
-            cur.close()
+        obj = Resource(name=name, resource_type_id=resource_type, current_speed=current_speed)
+
+        db.create_record("resource", dataclasses.asdict(obj))
+
         return obj
 
     def update_resource(self, resource_id: int, resource: Resource) -> Resource:
