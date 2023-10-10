@@ -177,27 +177,47 @@ class RequestHandler(BaseHTTPRequestHandler):
             resource_type_id = int(self.path.split("/")[-1])
             print(f"resource_type_id = {resource_type_id}")
         else:
-            self.send_response(HTTPStatus.NOT_FOUND)  # todo example of responding
+            self.send_response(HTTPStatus.NOT_FOUND)
             self.end_headers()
 
     def do_POST(self):
         if self.path == "/resources":
-            print("POST /resources")
-            # res = CONTROLLER.create_resource(obj)
-            # print(res)
-            # return
-
             #         controller = ResourceController(self)
             #         controller.handle_request()
+            print("POST /resources")
+            controller = ResourceController(
+                # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
+                path=self.path,
+                req_body=self.req_body,
+                url_params=self.url_params,
+            )
+            try:
+                res = controller.create()
+            except HTTPException as e:
+                # self.send_error(code=e.status_code, message=e.detail)
+                self.send_response(code=http.HTTPStatus.BAD_REQUEST)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(f"{e.detail}".encode())
+                return
+
+            serializer = ResourceSerializer(res)
+            response_string = serializer.serialize()
+            self.send_response(code=http.HTTPStatus.CREATED)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(response_string.encode())
 
         elif self.path == "/resource_types":
-
             #         # Create an instance of the ResourceController and handle resource-related routes
             #         controller = ResourceController(self)
             #         controller.handle_request()
             print("POST /resource_types")
             controller = ResourceTypeController(
-                db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
+                # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
+                path=self.path,
+                req_body=self.req_body,
+                url_params=self.url_params,
             )
             try:
                 res = controller.create()
