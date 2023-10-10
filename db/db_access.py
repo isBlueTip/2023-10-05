@@ -118,10 +118,7 @@ class DatabaseAccess:
 
         with self.connect() as conn:
             cur = conn.cursor()
-            cur.execute(
-                query,
-                (obj_id or filtering_dict["type_id"],),
-            )
+            cur.execute(query, (obj_id,))
 
             res = cur.fetchall()
             cur.close()

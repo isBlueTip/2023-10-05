@@ -172,22 +172,48 @@ class ResourceController(BaseDBController):
         # parse filtering params
         type_ids = self.url_params.get("type")
 
-        type_ids = type_ids[0].split(",")
-        try:
-            type_ids = tuple(map(int, type_ids))
-        except ValueError:
-            raise exceptions.BadRequest(detail=f"wrong type url parameters")
-
-        filtering_data = {"type_id": type_ids}
+        if type_ids:
+            type_ids = type_ids[0].split(",")
+            try:
+                type_ids = tuple(map(int, type_ids))
+            except ValueError:
+                raise exceptions.BadRequest(detail=f"wrong type url parameters")
+            filtering_data = {"type_id": type_ids}
+        else:
+            filtering_data = {}
         db_data = db.retrieve_records("resource", resource_id, filtering_data)
         objs = []
         if resource_id:  # single instance
             if not db_data:
                 raise exceptions.NotFound(detail=f"object with id = {resource_id} not found")
-            objs = Resource(name=db_data[0][1], resource_type_id=db_data[0][2], current_speed=db_data[0][3])
+            name = db_data[0][1]
+            resource_type_id = db_data[0][2]
+            current_speed = db_data[0][3]
+            res_type = db.retrieve_records("resource_type", resource_type_id, None)[0]
+            max_speed = res_type[2]
+            speed_exceeding = int((current_speed / max_speed - 1) * 100) if current_speed > max_speed else 0
+            objs = Resource(
+                name=name,
+                resource_type_id=resource_type_id,
+                current_speed=current_speed,
+                speed_exceeding_percentage=speed_exceeding,
+            )
         else:  # multiple instances
             for obj in db_data:
-                objs.append(Resource(name=obj[1], resource_type_id=obj[2], current_speed=obj[3]))
+                name = obj[1]
+                resource_type_id = obj[2]
+                current_speed = obj[3]
+                res_type = db.retrieve_records("resource_type", resource_type_id, None)[0]
+                max_speed = res_type[2]
+                speed_exceeding = int((current_speed / max_speed - 1) * 100) if current_speed > max_speed else 0
+                objs.append(
+                    Resource(
+                        name=name,
+                        resource_type_id=resource_type_id,
+                        current_speed=current_speed,
+                        speed_exceeding_percentage=speed_exceeding,
+                    )
+                )
         return objs
 
     def create(self) -> Resource | None:
