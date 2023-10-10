@@ -35,10 +35,10 @@ class BaseDBController(ABC):
         self.path = path
         self.req_body = req_body
         self.url_params = url_params
-        self.create_tables()
+        self.init_tables()
 
     @staticmethod
-    def create_tables():
+    def init_tables() -> None:
         with db.connect() as conn:
             cur = conn.cursor()
             cur.execute(  # check if tables in db already exist
@@ -54,26 +54,10 @@ class BaseDBController(ABC):
                    """
             )
             exists = cur.fetchone()[0]
-            if not exists:  # create tables if not exist
-                cur.execute(
-                    """
-                CREATE TABLE resource_type (
-                  id serial PRIMARY KEY, name varchar NOT NULL UNIQUE, 
-                  max_speed int NOT NULL, created_at timestamp DEFAULT NOW()
-                );
-
-                CREATE TABLE resource (
-                  id serial PRIMARY KEY, 
-                  name varchar NOT NULL UNIQUE, 
-                  resource_type_id int REFERENCES resource_type(id), 
-                  current_speed int, 
-                  created_at timestamp DEFAULT NOW()
-                );
-                """
-                )
-                # todo add fixtures
-                conn.commit()
             cur.close()
+        if not exists:  # create tables if not exist
+            db.create_tables()
+            db.insert_fixtures()
 
     @abstractmethod
     def get(self):
@@ -83,9 +67,9 @@ class BaseDBController(ABC):
     def create(self):
         pass
 
-    # @abstractmethod
-    # def update(self):
-    #     pass
+    @abstractmethod
+    def update(self):
+        pass
 
     @abstractmethod
     def delete(self):
@@ -134,11 +118,12 @@ class ResourceTypeController(BaseDBController):
 
         return obj
 
-    def update_resource_type(self, resource_type_id: int, resource_type: ResourceType) -> ResourceType:
-        updated_resource_type = self.db_service.update_resource_type(resource_type_id, resource_type)
-        if not updated_resource_type:
-            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource type not found")
-        return updated_resource_type
+    def update(self) -> ResourceType:
+        pass
+        # updated_resource_type = self.db_service.update_resource_type(resource_type_id, resource_type)
+        # if not updated_resource_type:
+        #     raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource type not found")
+        # return updated_resource_type
 
     def delete(self) -> None:
         resource_type_ids = self.url_params.get("id")
@@ -198,11 +183,12 @@ class ResourceController(BaseDBController):
 
         return obj
 
-    def update_resource(self, resource_id: int, resource: Resource) -> Resource:
-        updated_resource = self.db_service.update_resource(resource_id, resource)
-        if not updated_resource:
-            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource not found")
-        return updated_resource
+    def update(self) -> Resource:
+        pass
+        # updated_resource = self.db_service.update_resource(resource_id, resource)
+        # if not updated_resource:
+        #     raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource not found")
+        # return updated_resource
 
     def delete(self) -> None:
         resource_ids = self.url_params.get("id")

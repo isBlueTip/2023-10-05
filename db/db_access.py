@@ -1,3 +1,4 @@
+import random
 from contextlib import contextmanager
 from pprint import pprint
 from typing import Tuple
@@ -97,10 +98,13 @@ class DatabaseAccess:
         return res
 
     def delete_records(self, table_name: str, obj_ids: int | Tuple[int]):
+        if len(obj_ids) == 1:
+            obj_ids = f"({obj_ids[0]})"
         query = f"""
                 DELETE
                 FROM 
                   {table_name}
+                CASCADE
                 WHERE
                   id IN {obj_ids};
 """
@@ -115,15 +119,69 @@ class DatabaseAccess:
             cur.close()
         return
 
-    # def create_tables(self) -> None:
-    #     sql_commands = sql_file.read()
-    #     cursor = conn.cursor()
-    #     cursor.execute(sql_commands)
-    #     conn.commit()
-    #     cursor.close()
-    #
-    #
-    #     conn = psycopg2.connect(database="your_db", user="your_user", password="your_password", host="your_host",
-    #                             port="your_port")
-    #     execute_sql_script(conn, 'init_schema.sql')
-    #     conn.close()
+    def create_tables(self) -> None:
+        with self.connect() as conn:
+            cur = conn.cursor()
+            query = """
+            CREATE TABLE resource_type (
+              id serial PRIMARY KEY, name varchar NOT NULL UNIQUE, 
+              max_speed int NOT NULL, created_at timestamp DEFAULT NOW()
+            );
+            CREATE TABLE resource (
+              id serial PRIMARY KEY, 
+              name varchar NOT NULL UNIQUE, 
+              resource_type_id int REFERENCES resource_type(id) ON DELETE CASCADE, 
+              current_speed int, 
+              created_at timestamp DEFAULT NOW()
+            );
+             """
+            cur.execute(query)
+            conn.commit()
+            cur.close()
+
+    def insert_fixtures(self) -> None:
+        types = [
+            {"name": "loader", "max_speed": 50},
+            {"name": "excavator", "max_speed": 40},
+            {"name": "rig", "max_speed": 70},
+            {"name": "truck", "max_speed": 80},
+            {"name": "grader", "max_speed": 40},
+        ]
+        with self.connect() as conn:
+            cur = conn.cursor()
+            # create five resource_types
+            for data in types:
+                columns = ", ".join(x for x in data)
+                values = tuple((data[x] for x in data))
+                placeholders = ", ".join("%s" for x in data)
+                query = f""" INSERT INTO
+                      resource_type ({columns})
+                    VALUES
+                      ({placeholders});
+                """
+                cur.execute(query, values)
+                # conn.commit()
+
+            # create 5 x 5 resources
+            for i in range(1, 6):
+                types = {
+                    1: "L",
+                    2: "E",
+                    3: "R",
+                    4: "T",
+                    5: "G",
+                }
+                for _ in range(0, 5):
+                    name = types[i] + str(random.randint(0, 100))
+                    data = {"name": name, "resource_type_id": i, "current_speed": random.randint(0, 100)}
+                    columns = ", ".join(x for x in data)
+                    values = tuple((data[x] for x in data))
+                    placeholders = ", ".join("%s" for x in data)
+                    query = f""" INSERT INTO
+                          resource ({columns})
+                        VALUES
+                          ({placeholders});
+                    """
+                    cur.execute(query, values)
+            conn.commit()
+            cur.close()
