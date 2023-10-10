@@ -74,8 +74,8 @@ class DatabaseAccess:
     def update_record(self, table_name: str, obj_id: int, data: dict):
         values = tuple(data.values())
         values += (obj_id,)
-        set_assignments = [f"{column} = %s" for column in data]
-        placeholders = ", ".join(set_assignments)
+        set_placeholders = [f"{column} = %s" for column in data]
+        set_placeholders = ", ".join(set_placeholders)
 
         with self.connect() as conn:
             cur = conn.cursor()
@@ -83,16 +83,15 @@ class DatabaseAccess:
             UPDATE 
               {table_name} 
             SET 
-              {placeholders}
+              {set_placeholders}
             WHERE 
               id = %s;
 """
-            set_trace()
             cur.execute(query, values)
             conn.commit()
             cur.close()
 
-    def retrieve_records(self, table_name: str, obj_id: int | None):
+    def retrieve_records(self, table_name: str, obj_id: int | None, filtering_dict: dict | None):
         query = f"""
                 SELECT 
                   * 
@@ -100,18 +99,28 @@ class DatabaseAccess:
                   {table_name} 
 """
 
+        # either resource_id or filtering
         if obj_id:
             query += """
             WHERE
               id = (%s)
             """
+        elif filtering_dict:
+            filtering_args = filtering_dict["type_id"]
+            if len(filtering_args) == 1:  # add bracket for single object
+                filtering_args = f"({filtering_args[0]})"
+            query += f"""
+            WHERE
+              resource_type_id IN {filtering_args}
+            """
 
         query += ";"
+
         with self.connect() as conn:
             cur = conn.cursor()
             cur.execute(
                 query,
-                (obj_id,),
+                (obj_id or filtering_dict["type_id"],),
             )
 
             res = cur.fetchall()
@@ -119,7 +128,7 @@ class DatabaseAccess:
         return res
 
     def delete_records(self, table_name: str, obj_ids: int | Tuple[int]):
-        if len(obj_ids) == 1:
+        if len(obj_ids) == 1:  # add bracket for single object
             obj_ids = f"({obj_ids[0]})"
         query = f"""
                 DELETE
@@ -170,6 +179,7 @@ class DatabaseAccess:
         ]
         with self.connect() as conn:
             cur = conn.cursor()
+
             # create five resource_types
             for data in types:
                 columns = ", ".join(x for x in data)

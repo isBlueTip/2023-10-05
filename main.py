@@ -1,6 +1,6 @@
 import asyncio
 import json
-from http import HTTPStatus  # todo replace with custom exceptions statuses?
+from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pprint import pprint
 from urllib.parse import parse_qs, urlparse
@@ -9,15 +9,9 @@ from ipdb import set_trace
 
 import exceptions
 from controllers import ResourceController, ResourceTypeController
-from db.models import Resource, ResourceType
-from services.resource_service import ResourceService
-from services.resource_type_service import ResourceTypeService
 from views import ResourceSerializer, ResourceTypeSerializer
 
 URL_SCHEME = "scheme://path;parameters?query"
-
-resource_service = ResourceService()
-resource_type_service = ResourceTypeService()
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -54,6 +48,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.req_body = json.loads(bytes_body.decode())
         except Exception as e:
             print(f"ERROR: can't json request body: {e}")
+            self.respond_json(code=HTTPStatus.BAD_REQUEST, data=f"can't json request body: {e}")
             raise exceptions.BadRequest(detail="bad body data")
         print(f"REQUEST: {self.path}")
         return True  # follow the parent method
@@ -212,7 +207,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.respond_json(code=e.status_code, data=e.detail)
                 return
 
-            self.respond_json(code=HTTPStatus.OK, data="")
+            self.respond_json(code=HTTPStatus.CREATED, data="")
             print(f"SUCCESS: resource updated")
 
         # resource_types/
@@ -228,7 +223,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.respond_json(code=e.status_code, data=e.detail)
                 return
 
-            self.respond_json(code=HTTPStatus.OK, data="")
+            self.respond_json(code=HTTPStatus.CREATED, data="")
             print(f"SUCCESS: resource_type updated")
 
         # url not found

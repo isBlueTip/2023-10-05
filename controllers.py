@@ -3,7 +3,6 @@ import http
 from abc import ABC, abstractmethod
 from http import HTTPStatus
 from pprint import pprint
-from typing import List
 
 from ipdb import set_trace
 
@@ -12,7 +11,6 @@ from config import Config
 from db.db_access import DatabaseAccess
 from db.models import Resource, ResourceType
 from exceptions import HTTPException
-from services.resource_type_service import ResourceTypeService
 
 db = DatabaseAccess(
     db_name=Config.DB_NAME,
@@ -26,12 +24,10 @@ db = DatabaseAccess(
 class BaseDBController(ABC):
     def __init__(
         self,
-        # db_service: ResourceTypeService,
         path: str,  # request path
         req_body: dict | None = None,  # data from post if exist
         url_params: dict | None = None,  # data from url - filter, anything else?
     ):
-        # self.db_service = db_service
         self.path = path
         self.req_body = req_body
         self.url_params = url_params
@@ -78,6 +74,7 @@ class BaseDBController(ABC):
 
 class ResourceTypeController(BaseDBController):
     def get(self) -> ResourceType:
+        # parse id
         if len(self.path.split("/")) > 2:
             resource_type_id = self.path.split("/")[-1]
             if not resource_type_id.isnumeric():  # not numeric argument
@@ -147,6 +144,7 @@ class ResourceTypeController(BaseDBController):
         return obj
 
     def delete(self) -> None:
+        # parse ids
         resource_type_ids = self.url_params.get("id")
         if not resource_type_ids:
             raise exceptions.BadRequest(detail=f"wrong id parameters")
@@ -162,6 +160,7 @@ class ResourceTypeController(BaseDBController):
 
 class ResourceController(BaseDBController):
     def get(self) -> Resource:
+        # parse id
         if len(self.path.split("/")) > 2:
             resource_id = self.path.split("/")[-1]
             if not resource_id.isnumeric():  # not numeric argument
@@ -169,7 +168,18 @@ class ResourceController(BaseDBController):
             resource_id = int(resource_id)
         else:
             resource_id = None
-        db_data = db.retrieve_records("resource", resource_id)
+
+        # parse filtering params
+        type_ids = self.url_params.get("type")
+
+        type_ids = type_ids[0].split(",")
+        try:
+            type_ids = tuple(map(int, type_ids))
+        except ValueError:
+            raise exceptions.BadRequest(detail=f"wrong type url parameters")
+
+        filtering_data = {"type_id": type_ids}
+        db_data = db.retrieve_records("resource", resource_id, filtering_data)
         objs = []
         if resource_id:  # single instance
             if not db_data:
@@ -223,7 +233,7 @@ class ResourceController(BaseDBController):
         db_data = db.retrieve_records("resource", resource_id)
         if not db_data:
             raise exceptions.NotFound(detail=f"object with id = {resource_id} not found")
-        set_trace()
+
         obj = Resource(name=db_data[0][1], resource_type_id=db_data[0][2], current_speed=db_data[0][3])
         if name:
             obj.name = name
@@ -237,6 +247,7 @@ class ResourceController(BaseDBController):
         return obj
 
     def delete(self) -> None:
+        # parse ids
         resource_ids = self.url_params.get("id")
         if not resource_ids:
             raise exceptions.BadRequest(detail=f"wrong id parameters")
