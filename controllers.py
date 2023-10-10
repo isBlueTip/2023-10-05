@@ -78,7 +78,7 @@ class ResourceTypeController(BaseDBController):
             resource_type_id = int(resource_type_id)
         else:
             resource_type_id = None
-        db_data = db.retrieve_records("resource_type", resource_type_id)
+        db_data = db.retrieve_records("resource_type", resource_type_id, None)
         objs = []
         if resource_type_id:  # single instance
             if not db_data:
@@ -126,7 +126,7 @@ class ResourceTypeController(BaseDBController):
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "at least one attribute to change have to be specified")
 
         # retrieve existing ResourceType object, update and send its data to db connection
-        db_data = db.retrieve_records("resource_type", resource_type_id)
+        db_data = db.retrieve_records("resource_type", resource_type_id, None)
         if not db_data:
             raise exceptions.NotFound(detail=f"object with id = {resource_type_id} not found")
         obj = ResourceType(name=db_data[0][1], max_speed=db_data[0][2])
@@ -217,12 +217,12 @@ class ResourceController(BaseDBController):
         if not self.req_body:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
         name = self.req_body.get("name")
-        resource_type = self.req_body.get("resource_type")
+        resource_type_id = self.req_body.get("resource_type_id")
         current_speed = self.req_body.get("current_speed")
 
         if not name:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify name")
-        if not resource_type:
+        if not resource_type_id:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify resource_type")
         if not current_speed:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify current_speed")
@@ -230,9 +230,11 @@ class ResourceController(BaseDBController):
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "current_speed can't be negative")
 
         # create Resource object and send its data to db connection
-        obj = Resource(name=name, resource_type_id=resource_type, current_speed=current_speed)
+        obj = Resource(name=name, resource_type_id=resource_type_id, current_speed=current_speed)
 
-        db.create_record("resource", dataclasses.asdict(obj))
+        obj_data = dataclasses.asdict(obj)
+        obj_data.pop("speed_exceeding_percentage")
+        db.create_record("resource", obj_data)
 
         return obj
 
@@ -252,7 +254,7 @@ class ResourceController(BaseDBController):
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "at least one attribute to change have to be specified")
 
         # retrieve existing ResourceType object, update and send its data to db connection
-        db_data = db.retrieve_records("resource", resource_id)
+        db_data = db.retrieve_records("resource", resource_id, None)
         if not db_data:
             raise exceptions.NotFound(detail=f"object with id = {resource_id} not found")
 
@@ -261,10 +263,12 @@ class ResourceController(BaseDBController):
             obj.name = name
         if resource_type_id:
             obj.resource_type_id = resource_type_id
-        if current_speed:
+        if current_speed or current_speed == 0:
             obj.current_speed = current_speed
 
-        db.update_record("resource", resource_id, dataclasses.asdict(obj))
+        data = dataclasses.asdict(obj)
+        data.pop("speed_exceeding_percentage")
+        db.update_record("resource", resource_id, data)
 
         return obj
 

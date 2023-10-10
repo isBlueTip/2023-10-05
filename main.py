@@ -1,3 +1,10 @@
+# вынести валидацию из контроллеров
+# вынести повторяющийся код
+# больше разделить код каждого контроллера по назначению
+# Возможно, нужен ещё один слой доступа к БД
+# Не хватило времени разобраться с запуском в контейнере
+# Приложение в контейнере не видит БД
+
 import asyncio
 import json
 from http import HTTPStatus
@@ -51,7 +58,6 @@ class RequestHandler(BaseHTTPRequestHandler):
         return True  # follow the parent method
 
     def respond_json(self, code: int, data: str):
-        # self.send_error(code=e.status_code, message=e.detail)
         self.send_response(code=code)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
@@ -104,10 +110,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         # resources/
         if self.path == "/resources":
-            #         controller = ResourceController(self)
-            #         controller.handle_request()
             controller = ResourceController(
-                # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
                 path=self.path,
                 req_body=self.req_body,
                 url_params=self.url_params,
@@ -126,11 +129,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # resource_types/
         elif self.path == "/resource_types":
-            #         # Create an instance of the ResourceController and handle resource-related routes
-            #         controller = ResourceController(self)
-            #         controller.handle_request()
             controller = ResourceTypeController(
-                # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
                 path=self.path,
                 req_body=self.req_body,
                 url_params=self.url_params,
@@ -170,7 +169,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             print(f"SUCCESS: deleted")
 
         # resource_types/
-        elif self.path == "/resource_types":
+        elif self.path.startswith("/resource_types"):
             controller = ResourceTypeController(
                 path=self.path,
                 req_body=self.req_body,
@@ -233,7 +232,6 @@ def create_app():
     return HTTPServer(("0.0.0.0", 8000), RequestHandler)
 
 
-# if __name__ == '__main__':
 app = create_app()
 loop = asyncio.get_event_loop()
 loop.run_until_complete(app.serve_forever())

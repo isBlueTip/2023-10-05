@@ -18,9 +18,11 @@ class ResourceTypeSerializer(BaseSerializer):
         self.objs = objs
 
     def serialize(self) -> str:
+        # single instance
         if isinstance(self.objs, ResourceType):
             json_string = json.dumps(dataclasses.asdict(self.objs))
             return json_string
+        # objects list
         elif isinstance(self.objs, list) and all(isinstance(obj, ResourceType) for obj in self.objs):
             json_list = [dataclasses.asdict(obj) for obj in self.objs]
             json_string = json.dumps(json_list)
@@ -34,9 +36,13 @@ class ResourceSerializer(BaseSerializer):
         self.objs = objs
 
     def serialize(self) -> str:
+        # single object
         if isinstance(self.objs, Resource):
-            json_string = json.dumps(dataclasses.asdict(self.objs))
+            data = dataclasses.asdict(self.objs)
+            data.pop("speed_exceeding_percentage")
+            json_string = json.dumps(data)
             return json_string
+        # objects list
         elif isinstance(self.objs, list) and all(isinstance(obj, Resource) for obj in self.objs):
             json_list = [dataclasses.asdict(obj) for obj in self.objs]
             json_string = json.dumps(json_list)

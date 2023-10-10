@@ -127,7 +127,6 @@ class DatabaseAccess:
                 DELETE
                 FROM 
                   {table_name}
-                CASCADE
                 WHERE
                   id IN {obj_ids};
 """
