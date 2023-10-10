@@ -104,15 +104,64 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.respond_json(code=HTTPStatus.OK, data=response_string)
             print(f"SUCCESS: sent {res}")
 
-        # not found
+        # resource not found
         else:
             self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
             print(f"WARNING: 404 resource not found")
 
     def do_POST(self):
+        # resources/
         if self.path == "/resources":
             #         controller = ResourceController(self)
             #         controller.handle_request()
+            controller = ResourceController(
+                # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
+                path=self.path,
+                req_body=self.req_body,
+                url_params=self.url_params,
+            )
+            try:
+                res = controller.create()
+            except exceptions.HTTPException as e:
+                self.respond_json(code=e.status_code, data=e.detail)
+                return
+
+            serializer = ResourceSerializer(res)
+            response_string = serializer.serialize()
+
+            self.respond_json(code=HTTPStatus.CREATED, data=response_string)
+            print(f"SUCCESS: sent {res}")
+
+        # resource_types/
+        elif self.path == "/resource_types":
+            #         # Create an instance of the ResourceController and handle resource-related routes
+            #         controller = ResourceController(self)
+            #         controller.handle_request()
+            controller = ResourceTypeController(
+                # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
+                path=self.path,
+                req_body=self.req_body,
+                url_params=self.url_params,
+            )
+            try:
+                res = controller.create()
+            except exceptions.HTTPException as e:
+                self.respond_json(code=e.status_code, data=e.detail)
+                return
+
+            serializer = ResourceTypeSerializer(res)
+            response_string = serializer.serialize()
+
+            self.respond_json(code=HTTPStatus.CREATED, data=response_string)
+            print(f"SUCCESS: sent {res}")
+
+        # resource not found
+        else:
+            self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
+            print(f"WARNING: 404 resource not found")
+
+    def do_DELETE(self):
+        if self.path == "/resources":
             print("POST /resources")
             controller = ResourceController(
                 # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params

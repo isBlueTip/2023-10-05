@@ -76,15 +76,13 @@ class DatabaseAccess:
                   {table_name} 
 """
 
-        query += (
+        if obj_id:
+            query += """
+            WHERE
+              id = (%s)
             """
-                WHERE 
-                  id = (%s);
-"""
-            if obj_id
-            else ""
-        )
 
+        query += ";"
         with self.connect() as conn:
             cur = conn.cursor()
             cur.execute(
