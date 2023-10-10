@@ -8,3 +8,13 @@ class HTTPException(Exception):
 
     def __str__(self):
         return f"ERROR: {self.status_code}, {self.detail}"
+
+
+class NotFound(HTTPException):
+    def __init__(self, detail: str):
+        super().__init__(status_code=HTTPStatus.NOT_FOUND, detail=detail)
+
+
+class BadRequest(HTTPException):
+    def __init__(self, detail: str):
+        super().__init__(status_code=HTTPStatus.BAD_REQUEST, detail=detail)
