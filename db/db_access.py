@@ -3,7 +3,9 @@ from contextlib import contextmanager
 import ipdb
 import psycopg2
 
-from exceptions import BadRequest, HTTPException, NotFound
+import exceptions
+
+from . import models
 
 
 class DatabaseAccess:
@@ -28,18 +30,19 @@ class DatabaseAccess:
         )
         try:
             yield connection
+        except exceptions.HTTPException:
+            raise  # pass HTTPException further
         except psycopg2.Error as e:
             print("")
             print(f"e.pgcode = {e.pgcode}")
             print("")
             if e.pgcode == "23505":  # if record already exists
-                raise BadRequest(detail=f"object already exists") from e
+                raise exceptions.BadRequest(detail=f"object already exists") from e
             elif e.pgcode == "23503":  # can't find object
-                raise BadRequest(detail=f"can't find an object with given id") from e
+                raise exceptions.BadRequest(detail=f"can't find an object with given id") from e
             else:
                 print(f"ERROR: can't connect to database: {e}, code: {e.pgcode}")
-        # except HTTPException:
-        #     raise  # pass HTTPException further
+                raise exceptions.InternalServerError(detail=str(e)) from e
         except Exception as e:
             print(f"ERROR: can't connect to database: {e}")
         finally:
@@ -54,7 +57,8 @@ class DatabaseAccess:
             cur = conn.cursor()
             cur.execute(
                 f"""
-                INSERT INTO {table_name} ({columns})
+                INSERT INTO
+                  {table_name} ({columns})
                 VALUES
                   ({placeholders});
 """,
@@ -63,7 +67,28 @@ class DatabaseAccess:
             conn.commit()
             cur.close()
 
-    # def init_database(self) -> None:
+    def retrieve_record(self, table_name: str, obj_id: int):
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT 
+                  * 
+                FROM 
+                  {table_name} 
+                WHERE 
+                  id = (%s);
+""",
+                (obj_id,),
+            )
+            res = cur.fetchone()
+            if not res:
+                raise exceptions.NotFound(detail=f"object with id = {obj_id} not found")
+            obj = models.ResourceType(name=res[1], max_speed=res[2])
+            cur.close()
+        return obj
+
+    # def create_tables(self) -> None:
     #     sql_commands = sql_file.read()
     #     cursor = conn.cursor()
     #     cursor.execute(sql_commands)

@@ -1,7 +1,7 @@
 import asyncio
 import http
 import json
-from http import HTTPStatus
+from http import HTTPStatus  # todo replace with custom exceptions statuses?
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pprint import pprint
 from urllib.parse import parse_qs, urlparse
@@ -9,9 +9,9 @@ from wsgiref.simple_server import make_server
 
 import ipdb
 
+import exceptions
 from controllers import ResourceController, ResourceTypeController
 from db.models import Resource, ResourceType
-from exceptions import HTTPException
 from services.resource_service import ResourceService
 from services.resource_type_service import ResourceTypeService
 from views import ResourceSerializer, ResourceTypeSerializer
@@ -144,10 +144,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         body_len = int(self.headers.get("Content-Length"))
         bytes_body = self.rfile.read(body_len)
 
+        # parse body from request
         try:
             self.req_body = json.loads(bytes_body.decode())
         except Exception:
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, detail="bad body data")
+            raise exceptions.BadRequest(detail="bad body data")
         return True  # follow the parent method
 
     def do_GET(self):
@@ -163,7 +164,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         # resources
         if self.path == "/resources":
             print("/resources")
-        elif self.path.startswith("/resources/"):
+        elif self.path.startswith("/resources/id"):
             print("/resources/")
             # todo try if int else 404
             resource_id = int(self.path.split("/")[-1])
@@ -173,9 +174,24 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif self.path == "/resource_types":
             print("/resource_types")
         elif self.path.startswith("/resource_types/"):
-            print("/resource_types/")
-            resource_type_id = int(self.path.split("/")[-1])
-            print(f"resource_type_id = {resource_type_id}")
+            print("/resource_types/id")
+            controller = ResourceTypeController(
+                # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
+                path=self.path,
+                req_body=self.req_body,
+                url_params=self.url_params,
+            )
+            try:
+                res = controller.get()
+            except exceptions.HTTPException as e:
+                # self.send_error(code=e.status_code, message=e.detail)
+                self.send_response(code=e.status_code)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(f"{e.detail}".encode())
+                return
+
+            print(f"res = {res}")
         else:
             self.send_response(HTTPStatus.NOT_FOUND)
             self.end_headers()
@@ -193,9 +209,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             )
             try:
                 res = controller.create()
-            except HTTPException as e:
+            except exceptions.HTTPException as e:
                 # self.send_error(code=e.status_code, message=e.detail)
-                self.send_response(code=http.HTTPStatus.BAD_REQUEST)
+                self.send_response(code=e.status_code)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(f"{e.detail}".encode())
@@ -221,9 +237,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             )
             try:
                 res = controller.create()
-            except HTTPException as e:
+            except exceptions.HTTPException as e:
                 # self.send_error(code=e.status_code, message=e.detail)
-                self.send_response(code=http.HTTPStatus.BAD_REQUEST)
+                self.send_response(code=e.status_code)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(f"{e.detail}".encode())
