@@ -1,7 +1,9 @@
 from contextlib import contextmanager
+from pprint import pprint
+from typing import Tuple
 
-import ipdb
 import psycopg2
+from ipdb import set_trace
 
 import exceptions
 
@@ -93,6 +95,25 @@ class DatabaseAccess:
             res = cur.fetchall()
             cur.close()
         return res
+
+    def delete_records(self, table_name: str, obj_ids: int | Tuple[int]):
+        query = f"""
+                DELETE
+                FROM 
+                  {table_name}
+                WHERE
+                  id IN {obj_ids};
+"""
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                query,
+                (obj_ids,),
+            )
+
+            conn.commit()
+            cur.close()
+        return
 
     # def create_tables(self) -> None:
     #     sql_commands = sql_file.read()

@@ -5,8 +5,7 @@ from http import HTTPStatus
 from pprint import pprint
 from typing import List
 
-import ipdb
-import psycopg2
+from ipdb import set_trace
 
 import exceptions
 from config import Config
@@ -87,10 +86,10 @@ class BaseDBController(ABC):
     # @abstractmethod
     # def update(self):
     #     pass
-    #
-    # @abstractmethod
-    # def delete(self):
-    #     pass
+
+    @abstractmethod
+    def delete(self):
+        pass
 
 
 class ResourceTypeController(BaseDBController):
@@ -141,10 +140,18 @@ class ResourceTypeController(BaseDBController):
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource type not found")
         return updated_resource_type
 
-    def delete_resource_type(self, resource_type_id: int) -> None:  # todo bulk delete?
-        deleted = self.db_service.delete_resource_type(resource_type_id)
-        if not deleted:
-            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource type not found")
+    def delete(self) -> None:
+        resource_type_ids = self.url_params.get("id")
+        if not resource_type_ids:
+            raise exceptions.BadRequest(detail=f"wrong id parameters")
+
+        resource_type_ids = resource_type_ids[0].split(",")
+        try:
+            resource_type_ids = tuple(map(int, resource_type_ids))
+        except ValueError:
+            raise exceptions.BadRequest(detail=f"wrong id parameters")
+        db.delete_records("resource_type", resource_type_ids)
+        return
 
 
 class ResourceController(BaseDBController):
@@ -197,7 +204,15 @@ class ResourceController(BaseDBController):
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource not found")
         return updated_resource
 
-    def delete_resource(self, resource_id: int) -> None:
-        deleted = self.db_service.delete_resource(resource_id)
-        if not deleted:
-            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource not found")
+    def delete(self) -> None:
+        resource_ids = self.url_params.get("id")
+        if not resource_ids:
+            raise exceptions.BadRequest(detail=f"wrong id parameters")
+
+        resource_ids = resource_ids[0].split(",")
+        try:
+            resource_ids = tuple(map(int, resource_ids))
+        except ValueError:
+            raise exceptions.BadRequest(detail=f"wrong id parameters")
+        db.delete_records("resource", resource_ids)
+        return

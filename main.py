@@ -161,64 +161,42 @@ class RequestHandler(BaseHTTPRequestHandler):
             print(f"WARNING: 404 resource not found")
 
     def do_DELETE(self):
-        if self.path == "/resources":
-            print("POST /resources")
+        # resources/
+        if self.path.startswith("/resources"):
             controller = ResourceController(
-                # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
                 path=self.path,
                 req_body=self.req_body,
                 url_params=self.url_params,
             )
             try:
-                res = controller.create()
+                controller.delete()  # todo return deleted ids?
             except exceptions.HTTPException as e:
-                # self.send_error(code=e.status_code, message=e.detail)
-                self.send_response(code=e.status_code)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(f"{e.detail}".encode())
+                self.respond_json(code=e.status_code, data=e.detail)
                 return
 
-            serializer = ResourceSerializer(res)
-            response_string = serializer.serialize()
-            self.send_response(code=HTTPStatus.CREATED)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(response_string.encode())
+            self.respond_json(code=HTTPStatus.NO_CONTENT, data="")
+            print(f"SUCCESS: deleted")
 
+        # resource_types/
         elif self.path == "/resource_types":
-            #         # Create an instance of the ResourceController and handle resource-related routes
-            #         controller = ResourceController(self)
-            #         controller.handle_request()
-            print("POST /resource_types")
             controller = ResourceTypeController(
-                # db_service=resource_type_service, path=self.path, req_body=self.req_body, url_params=self.url_params
                 path=self.path,
                 req_body=self.req_body,
                 url_params=self.url_params,
             )
             try:
-                res = controller.create()
+                controller.delete()  # todo return deleted ids?
             except exceptions.HTTPException as e:
-                # self.send_error(code=e.status_code, message=e.detail)
-                self.send_response(code=e.status_code)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(f"{e.detail}".encode())
+                self.respond_json(code=e.status_code, data=e.detail)
                 return
 
-            serializer = ResourceTypeSerializer(res)
-            response_string = serializer.serialize()
-            self.send_response(code=HTTPStatus.CREATED)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(response_string.encode())
+            self.respond_json(code=HTTPStatus.NO_CONTENT, data="")
+            print(f"SUCCESS: deleted")
 
-        # Resource not found
+        # resource not found
         else:
-            self.send_response(code=HTTPStatus.NOT_FOUND)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
+            self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
+            print(f"WARNING: 404 resource not found")
 
 
 def create_app():
