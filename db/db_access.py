@@ -30,21 +30,22 @@ class DatabaseAccess:
         )
         try:
             yield connection
+
         except exceptions.HTTPException:
-            raise  # pass HTTPException further
+            raise  # catch HTTPException further
+
         except psycopg2.Error as e:
-            print("")
-            print(f"e.pgcode = {e.pgcode}")
-            print("")
             if e.pgcode == "23505":  # if record already exists
                 raise exceptions.BadRequest(detail=f"object already exists") from e
-            elif e.pgcode == "23503":  # can't find object
+            elif e.pgcode == "23503":  # can't find record
                 raise exceptions.BadRequest(detail=f"can't find an object with given id") from e
             else:
                 print(f"ERROR: can't connect to database: {e}, code: {e.pgcode}")
                 raise exceptions.InternalServerError(detail=str(e)) from e
+
         except Exception as e:
             print(f"ERROR: can't connect to database: {e}")
+
         finally:
             connection.close()
 
@@ -67,26 +68,33 @@ class DatabaseAccess:
             conn.commit()
             cur.close()
 
-    def retrieve_record(self, table_name: str, obj_id: int):
-        with self.connect() as conn:
-            cur = conn.cursor()
-            cur.execute(
-                f"""
+    def retrieve_records(self, table_name: str, obj_id: int | None):
+        query = f"""
                 SELECT 
                   * 
                 FROM 
                   {table_name} 
+"""
+
+        query += (
+            """
                 WHERE 
                   id = (%s);
-""",
+"""
+            if obj_id
+            else ""
+        )
+
+        with self.connect() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                query,
                 (obj_id,),
             )
-            res = cur.fetchone()
-            if not res:
-                raise exceptions.NotFound(detail=f"object with id = {obj_id} not found")
-            obj = models.ResourceType(name=res[1], max_speed=res[2])
+
+            res = cur.fetchall()
             cur.close()
-        return obj
+        return res
 
     # def create_tables(self) -> None:
     #     sql_commands = sql_file.read()

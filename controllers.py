@@ -8,6 +8,7 @@ from typing import List
 import ipdb
 import psycopg2
 
+import exceptions
 from config import Config
 from db.db_access import DatabaseAccess
 from db.models import Resource, ResourceType
@@ -75,13 +76,9 @@ class BaseDBController(ABC):
                 conn.commit()
             cur.close()
 
-    # @abstractmethod
-    # def list(self):
-    #     pass
-    #
-    # @abstractmethod
-    # def get(self):
-    #     pass
+    @abstractmethod
+    def get(self):
+        pass
 
     @abstractmethod
     def create(self):
@@ -97,15 +94,25 @@ class BaseDBController(ABC):
 
 
 class ResourceTypeController(BaseDBController):
-    def list_resource_types(self) -> List[ResourceType]:
-        resource_types = self.db_service.get_all_resource_types()
-        return resource_types
-
-    def get_resource_type(self, resource_type_id: int) -> ResourceType:
-        resource_type = self.db_service.get_resource_type_by_id(resource_type_id)
-        if not resource_type:
-            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource type not found")
-        return resource_type
+    def get(self) -> ResourceType:
+        if len(self.path.split("/")) > 2:
+            resource_type_id = self.path.split("/")[-1]
+            if not resource_type_id.isnumeric():  # not numeric argument
+                raise exceptions.NotFound(detail=f"{resource_type_id} not found")
+            resource_type_id = int(resource_type_id)
+        else:
+            resource_type_id = None
+        db_data = db.retrieve_records("resource_type", resource_type_id)
+        objs = []
+        if resource_type_id:  # single instance
+            if not db_data:
+                raise exceptions.NotFound(detail=f"object with id = {resource_type_id} not found")
+            objs = ResourceType(name=db_data[0][1], max_speed=db_data[0][2])
+        else:  # multiple instances
+            for obj in db_data:
+                print(f"obj = {obj}")
+                objs.append(ResourceType(name=obj[1], max_speed=obj[2]))
+        return objs
 
     def create(self) -> ResourceType | None:
         # validate request data
@@ -141,15 +148,24 @@ class ResourceTypeController(BaseDBController):
 
 
 class ResourceController(BaseDBController):
-    def list_resources(self) -> List[Resource]:
-        resources = self.db_service.list_resources()
-        return resources
-
-    def get_resource(self, resource_id: int) -> Resource:
-        resource = self.db_service.get_resource(resource_id)
-        if not resource:
-            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource not found")
-        return resource
+    def get(self) -> Resource:
+        if len(self.path.split("/")) > 2:
+            resource_id = self.path.split("/")[-1]
+            if not resource_id.isnumeric():  # not numeric argument
+                raise exceptions.NotFound(detail=f"{resource_id} not found")
+            resource_id = int(resource_id)
+        else:
+            resource_id = None
+        db_data = db.retrieve_records("resource", resource_id)
+        objs = []
+        if resource_id:  # single instance
+            if not db_data:
+                raise exceptions.NotFound(detail=f"object with id = {resource_id} not found")
+            objs = Resource(name=db_data[0][1], resource_type_id=db_data[0][2], current_speed=db_data[0][3])
+        else:  # multiple instances
+            for obj in db_data:
+                objs.append(Resource(name=obj[1], resource_type_id=obj[2], current_speed=obj[3]))
+        return objs
 
     def create(self) -> Resource | None:
         # validate request data
