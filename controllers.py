@@ -119,11 +119,32 @@ class ResourceTypeController(BaseDBController):
         return obj
 
     def update(self) -> ResourceType:
-        pass
-        # updated_resource_type = self.db_service.update_resource_type(resource_type_id, resource_type)
-        # if not updated_resource_type:
-        #     raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource type not found")
-        # return updated_resource_type
+        # validate request data
+        resource_type_id = self.path.split("/")[-1]
+        if not resource_type_id.isnumeric():  # not numeric argument
+            raise exceptions.NotFound(detail=f"{resource_type_id} not found")
+        resource_type_id = int(resource_type_id)
+
+        if not self.req_body:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
+        name = self.req_body.get("name")
+        max_speed = self.req_body.get("max_speed")
+        if not any((name, max_speed)):
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "at least one attribute to change have to be specified")
+
+        # retrieve existing ResourceType object, update and send its data to db connection
+        db_data = db.retrieve_records("resource_type", resource_type_id)
+        if not db_data:
+            raise exceptions.NotFound(detail=f"object with id = {resource_type_id} not found")
+        obj = ResourceType(name=db_data[0][1], max_speed=db_data[0][2])
+        if name:
+            obj.name = name
+        if max_speed:
+            obj.max_speed = max_speed
+
+        db.update_record("resource_type", resource_type_id, dataclasses.asdict(obj))
+
+        return obj
 
     def delete(self) -> None:
         resource_type_ids = self.url_params.get("id")
@@ -184,11 +205,36 @@ class ResourceController(BaseDBController):
         return obj
 
     def update(self) -> Resource:
-        pass
-        # updated_resource = self.db_service.update_resource(resource_id, resource)
-        # if not updated_resource:
-        #     raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Resource not found")
-        # return updated_resource
+        # validate request data
+        resource_id = self.path.split("/")[-1]
+        if not resource_id.isnumeric():  # not numeric argument
+            raise exceptions.NotFound(detail=f"{resource_id} not found")
+        resource_id = int(resource_id)
+
+        if not self.req_body:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
+        name = self.req_body.get("name")
+        resource_type_id = self.req_body.get("resource_type_id")
+        current_speed = self.req_body.get("current_speed")
+        if not any((name, resource_type_id, current_speed)):
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "at least one attribute to change have to be specified")
+
+        # retrieve existing ResourceType object, update and send its data to db connection
+        db_data = db.retrieve_records("resource", resource_id)
+        if not db_data:
+            raise exceptions.NotFound(detail=f"object with id = {resource_id} not found")
+        set_trace()
+        obj = Resource(name=db_data[0][1], resource_type_id=db_data[0][2], current_speed=db_data[0][3])
+        if name:
+            obj.name = name
+        if resource_type_id:
+            obj.resource_type_id = resource_type_id
+        if current_speed:
+            obj.current_speed = current_speed
+
+        db.update_record("resource", resource_id, dataclasses.asdict(obj))
+
+        return obj
 
     def delete(self) -> None:
         resource_ids = self.url_params.get("id")

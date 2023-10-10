@@ -54,7 +54,7 @@ class DatabaseAccess:
 
     def create_record(self, table_name: str, data: dict):
         columns = ", ".join(x for x in data)
-        values = tuple((data[x] for x in data))
+        values = tuple(data.values())
         placeholders = ", ".join("%s" for x in data)
 
         with self.connect() as conn:
@@ -68,6 +68,27 @@ class DatabaseAccess:
 """,
                 values,
             )
+            conn.commit()
+            cur.close()
+
+    def update_record(self, table_name: str, obj_id: int, data: dict):
+        values = tuple(data.values())
+        values += (obj_id,)
+        set_assignments = [f"{column} = %s" for column in data]
+        placeholders = ", ".join(set_assignments)
+
+        with self.connect() as conn:
+            cur = conn.cursor()
+            query = f"""
+            UPDATE 
+              {table_name} 
+            SET 
+              {placeholders}
+            WHERE 
+              id = %s;
+"""
+            set_trace()
+            cur.execute(query, values)
             conn.commit()
             cur.close()
 
@@ -152,7 +173,7 @@ class DatabaseAccess:
             # create five resource_types
             for data in types:
                 columns = ", ".join(x for x in data)
-                values = tuple((data[x] for x in data))
+                values = tuple(data.values())
                 placeholders = ", ".join("%s" for x in data)
                 query = f""" INSERT INTO
                       resource_type ({columns})
@@ -160,7 +181,6 @@ class DatabaseAccess:
                       ({placeholders});
                 """
                 cur.execute(query, values)
-                # conn.commit()
 
             # create 5 x 5 resources
             for i in range(1, 6):
@@ -175,7 +195,7 @@ class DatabaseAccess:
                     name = types[i] + str(random.randint(0, 100))
                     data = {"name": name, "resource_type_id": i, "current_speed": random.randint(0, 100)}
                     columns = ", ".join(x for x in data)
-                    values = tuple((data[x] for x in data))
+                    values = tuple(data.values())
                     placeholders = ", ".join("%s" for x in data)
                     query = f""" INSERT INTO
                           resource ({columns})
