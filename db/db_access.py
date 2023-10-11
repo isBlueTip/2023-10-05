@@ -194,8 +194,11 @@ class DatabaseAccess:
                     4: "T",
                     5: "G",
                 }
-                for _ in range(0, 5):
-                    name = types[i] + str(random.randint(0, 100))
+
+                names = random.sample(range(100), 5)
+                for name in names:
+                    name = types[i] + str(name)
+                    print(f"name = {name}")
                     data = {"name": name, "resource_type_id": i, "current_speed": random.randint(0, 100)}
                     columns = ", ".join(x for x in data)
                     values = tuple(data.values())
