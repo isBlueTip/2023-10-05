@@ -8,11 +8,15 @@ import asyncio
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pprint import pprint
+from typing import List
 from urllib.parse import parse_qs, urlparse
+
+from ipdb import set_trace
 
 import exceptions
 from controllers import ResourceController, ResourceTypeController
-from views import ResourceSerializer, ResourceTypeSerializer
+from views import ResourceTypeView, ResourceView
 
 URL_SCHEME = "scheme://path;parameters?query"
 
@@ -102,7 +106,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         else:
             return None
 
-    def get_serializer(self):
+    def get_view(self, data: List):
         """
         Return a serializer class depending on requested path.
 
@@ -111,11 +115,11 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # /resources
         if self.path.startswith("/resources"):
-            return ResourceSerializer
+            return ResourceView(data)
 
         # /resource_types
         elif self.path.startswith("/resource_types"):
-            return ResourceTypeSerializer
+            return ResourceTypeView(data)
 
         # not found
         else:
@@ -130,18 +134,16 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # call specific method handler
         try:
-            res = controller.retrieve()
+            data = controller.retrieve()
         except exceptions.HTTPException as e:
             self.respond_json(code=e.status_code, data=f"{e.detail}")
             return
 
-        # todo return instance instead of class
-        serializer = self.get_serializer()
-        serializer = serializer(res)
-        response_string = serializer.serialize()
+        view = self.get_view(data)
+        response_string = view.serialize()
 
         self.respond_json(code=HTTPStatus.OK, data=response_string)
-        print(f"SUCCESS: sent {res}")
+        print(f"SUCCESS: sent {data}")
 
     def do_POST(self):
         controller = self.get_controller()
@@ -152,18 +154,16 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # call specific method handler
         try:
-            res = controller.create()
+            data = controller.create()
         except exceptions.HTTPException as e:
             self.respond_json(code=e.status_code, data=e.detail)
             return
 
-        # todo return instance instead of class
-        serializer = self.get_serializer()
-        serializer = serializer(res)
-        response_string = serializer.serialize()
+        view = self.get_view(data)
+        response_string = view.serialize()
 
         self.respond_json(code=HTTPStatus.CREATED, data=response_string)
-        print(f"SUCCESS: sent {res}")
+        print(f"SUCCESS: sent {data}")
 
     def do_PATCH(self):
         controller = self.get_controller()
@@ -174,18 +174,16 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # call specific method handler
         try:
-            res = controller.update()
+            data = controller.update()
         except exceptions.HTTPException as e:
             self.respond_json(code=e.status_code, data=e.detail)
             return
 
-        # todo return instance instead of class
-        serializer = self.get_serializer()
-        serializer = serializer(res)
-        response_string = serializer.serialize()
+        view = self.get_view(data)
+        response_string = view.serialize()
 
         self.respond_json(code=HTTPStatus.CREATED, data=response_string)
-        print(f"SUCCESS: {res} updated")
+        print(f"SUCCESS: {data} updated")
 
     def do_DELETE(self):
         controller = self.get_controller()

@@ -82,7 +82,7 @@ class BaseDBController(ABC):
 
 
 class ResourceTypeController(BaseDBController):
-    def create(self) -> ResourceType | None:
+    def create(self) -> List[ResourceType] | None:
         url = self.url_as_list()
         if len(url) > 1:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "can't post to specific id")
@@ -102,7 +102,7 @@ class ResourceTypeController(BaseDBController):
         adapter = DBAdapter()
         result = adapter.create(resource_type, "resource_type")
 
-        return result
+        return [result]
 
     def retrieve(self) -> List[ResourceType]:
         url = self.url_as_list()
@@ -184,7 +184,7 @@ class ResourceTypeController(BaseDBController):
 
 
 class ResourceController(BaseDBController):
-    def create(self) -> Resource | None:
+    def create(self) -> List[Resource] | None:
         url = self.url_as_list()
         if len(url) > 1:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "can't post to specific id")
@@ -206,7 +206,7 @@ class ResourceController(BaseDBController):
         adapter = DBAdapter()
         result = adapter.create(resource, "resource")
 
-        return result
+        return [result]
 
     def retrieve(self) -> List[Resource]:
         url = self.url_as_list()
