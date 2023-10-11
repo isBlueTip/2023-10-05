@@ -25,6 +25,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         """
         Init additional parameters.
+
         :param args:
         :param kwargs:
         """
@@ -36,7 +37,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def parse_request(self, *args, **kwargs) -> bool:
         """
-        Add additional request parsing steps
+        Add additional request parsing steps.
+
         :param args:
         :param kwargs:
         :return:
@@ -47,7 +49,6 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # parse url params from raw 'self.path'
         self.parsed_url = urlparse(self.path, scheme=URL_SCHEME)
-        # self.path = self.parsed_url.path.rstrip("/")
         self.url_params = parse_qs(self.parsed_url.query)
 
         # parse json from request body
@@ -59,68 +60,99 @@ class RequestHandler(BaseHTTPRequestHandler):
             print(f"ERROR: can't parse json from requests body: {e}")
             self.respond_json(code=HTTPStatus.BAD_REQUEST, data=f"can't parse json from requests body: {e}")
             return False  # follow the parent method
-            # raise exceptions.BadRequest(detail=f"can't parse json from requests body: {e}")
         else:
             print(f"{self.command} {self.path}")
             return True  # follow the parent method
 
-    # shortcut for responding
     def respond_json(self, code: int, data: str) -> None:
+        """
+        Respond to a requesting client.
+
+        :param code:
+        :param data:
+        :return:
+        """
+
         self.send_response(code=code)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(f"{data}".encode())
 
-    def do_GET(self):
-        # resources/
+    def get_controller(self):
+        """
+        Return a controller instance depending on requested path.
+
+        :return:
+        """
+
+        # /resources
         if self.path.startswith("/resources"):
-            controller = ResourceController(
-                path=self.path,
-                req_body=self.request_json,
+            return ResourceController(
+                url=self.parsed_url,
+                request_json=self.request_json,
                 url_params=self.url_params,
             )
-            try:
-                res = controller.get()
-            except exceptions.HTTPException as e:
-                self.respond_json(code=e.status_code, data=f"{e.detail}")
-                return
 
-            serializer = ResourceSerializer(res)
-            response_string = serializer.serialize()
-
-            self.respond_json(code=HTTPStatus.OK, data=response_string)
-            print(f"SUCCESS: sent {res}")
-
-        # resource_types/
+        # /resource_types
         elif self.path.startswith("/resource_types"):
-            controller = ResourceTypeController(
-                path=self.path,
-                req_body=self.request_json,
+            return ResourceTypeController(
+                url=self.parsed_url,
+                request_json=self.request_json,
                 url_params=self.url_params,
             )
-            try:
-                res = controller.get()
-            except exceptions.HTTPException as e:
-                self.respond_json(code=e.status_code, data=f"{e.detail}")
-                return
 
-            serializer = ResourceTypeSerializer(res)
-            response_string = serializer.serialize()
+        # not found
+        else:
+            return None
 
-            self.respond_json(code=HTTPStatus.OK, data=response_string)
-            print(f"SUCCESS: sent {res}")
+    def get_serializer(self):
+        """
+        Return a serializer class depending on requested path.
+
+        :return:
+        """
+
+        # /resources
+        if self.path.startswith("/resources"):
+            return ResourceSerializer
+
+        # /resource_types
+        elif self.path.startswith("/resource_types"):
+            return ResourceTypeSerializer
+
+        # not found
+        else:
+            return None
+
+    def do_GET(self):
+        controller = self.get_controller()
 
         # url not found
-        else:
+        if not controller:
             self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
             print(f"WARNING: 404 resource not found")
+
+        # call specific method handler
+        try:
+            res = controller.get()
+        except exceptions.HTTPException as e:
+            self.respond_json(code=e.status_code, data=f"{e.detail}")
+            return
+
+        # todo return instance instead of class
+        serializer = self.get_serializer()
+        serializer = serializer(res)
+        response_string = serializer.serialize()
+
+        self.respond_json(code=HTTPStatus.OK, data=response_string)
+        print(f"SUCCESS: sent {res}")
 
     def do_POST(self):
         # resources/
         if self.path.startswith("/resources"):
             controller = ResourceController(
                 path=self.path,
-                req_body=self.request_json,
+                request_json=self.request_json,
                 url_params=self.url_params,
             )
             try:
@@ -139,7 +171,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif self.path.startswith("/resource_types"):
             controller = ResourceTypeController(
                 path=self.path,
-                req_body=self.request_json,
+                request_json=self.request_json,
                 url_params=self.url_params,
             )
             try:
@@ -164,7 +196,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path.startswith("/resources"):
             controller = ResourceController(
                 path=self.path,
-                req_body=self.request_json,
+                request_json=self.request_json,
                 url_params=self.url_params,
             )
             try:
@@ -180,7 +212,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif self.path.startswith("/resource_types"):
             controller = ResourceTypeController(
                 path=self.path,
-                req_body=self.request_json,
+                request_json=self.request_json,
                 url_params=self.url_params,
             )
             try:
@@ -202,7 +234,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path.startswith("/resources"):
             controller = ResourceController(
                 path=self.path,
-                req_body=self.request_json,
+                request_json=self.request_json,
                 url_params=self.url_params,
             )
             try:
@@ -218,7 +250,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif self.path.startswith("/resource_types"):
             controller = ResourceTypeController(
                 path=self.path,
-                req_body=self.request_json,
+                request_json=self.request_json,
                 url_params=self.url_params,
             )
             try:

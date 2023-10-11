@@ -16,20 +16,22 @@ db = DatabaseAccess(
     port=Config.DB_PORT,
 )
 
+# TODO CONTROLLERS PARSE DATA TO DATACLASS AND CALL SERVICE
+# TODO SERVICE SENDS DATACLASS DATA TO DB AND CALL REQUIRED METHOD OF DB
+
 
 class BaseDBController(ABC):
     def __init__(
         self,
-        # parsed_url,
-        path: str,  # request path
-        req_body: dict | None = None,  # data from post if exist
+        url,
+        request_json: dict | None = None,  # data from post if exist
         url_params: dict | None = None,  # data from url - filter, anything else?
     ):
-        # self.parsed_url = parsed_url
-        self.path = path
-        self.request_json = req_body
+        self.url = url
+        self.request_json = request_json
         self.url_params = url_params
 
+        # TODO move closer to DB
         # check if db tables exist init and populate if not
         self.init_tables()
 
@@ -70,17 +72,25 @@ class BaseDBController(ABC):
     def delete(self):
         pass
 
+    def url_as_list(self):
+        return self.url.path.strip("/").split("/")
+
 
 class ResourceTypeController(BaseDBController):
     def get(self) -> ResourceType:
-        # parse id
-        if len(self.path.split("/")) > 2:
-            resource_type_id = self.path.split("/")[-1]
+        url = self.url_as_list()
+
+        # parse resource_type id
+        if len(url) > 1:
+            resource_type_id = url[1]
+
             if not resource_type_id.isnumeric():  # not numeric argument
                 raise exceptions.NotFound(detail=f"{resource_type_id} not found")
+
             resource_type_id = int(resource_type_id)
         else:
             resource_type_id = None
+
         db_data = db.retrieve_records("resource_type", resource_type_id, None)
         objs = []
         if resource_type_id:  # single instance
@@ -159,11 +169,15 @@ class ResourceTypeController(BaseDBController):
 
 class ResourceController(BaseDBController):
     def get(self) -> Resource:
-        # parse id
-        if len(self.path.split("/")) > 2:
-            resource_id = self.path.split("/")[-1]
+        url = self.url_as_list()
+
+        # parse resource id
+        if len(url) > 1:
+            resource_id = url[-1]
+
             if not resource_id.isnumeric():  # not numeric argument
                 raise exceptions.NotFound(detail=f"{resource_id} not found")
+
             resource_id = int(resource_id)
         else:
             resource_id = None
