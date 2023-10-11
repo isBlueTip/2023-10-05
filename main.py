@@ -1,17 +1,16 @@
-# вынести валидацию из контроллеров
-# вынести повторяющийся код
-# больше разделить код каждого контроллера по назначению
-# Возможно, нужен ещё один слой доступа к БД
-# Не хватило времени разобраться с запуском в контейнере
-# Приложение в контейнере не видит БД
+# more repeating controllers code
+# separate each controller's code by functionality (for ex., validate)
+# another db access layer - services, accept Python types
+# catch errors from db connection, add more details and pass it further to more specific http errors
+# add proper validation as models methods and use everywhere
+
+# Не хватило времени разобраться с запуском в контейнере, приложение из контейнера не видит БД
 
 import asyncio
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
-
-import ipdb
 
 import exceptions
 from controllers import ResourceController, ResourceTypeController
@@ -127,8 +126,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         controller = self.get_controller()
 
-        # url not found
-        if not controller:
+        if not controller:  # url not found
             self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
             print(f"WARNING: 404 resource not found")
 
@@ -148,48 +146,26 @@ class RequestHandler(BaseHTTPRequestHandler):
         print(f"SUCCESS: sent {res}")
 
     def do_POST(self):
-        # resources/
-        if self.path.startswith("/resources"):
-            controller = ResourceController(
-                path=self.path,
-                request_json=self.request_json,
-                url_params=self.url_params,
-            )
-            try:
-                res = controller.create()
-            except exceptions.HTTPException as e:
-                self.respond_json(code=e.status_code, data=e.detail)
-                return
+        controller = self.get_controller()
 
-            serializer = ResourceSerializer(res)
-            response_string = serializer.serialize()
-
-            self.respond_json(code=HTTPStatus.CREATED, data=response_string)
-            print(f"SUCCESS: sent {res}")
-
-        # resource_types/
-        elif self.path.startswith("/resource_types"):
-            controller = ResourceTypeController(
-                path=self.path,
-                request_json=self.request_json,
-                url_params=self.url_params,
-            )
-            try:
-                res = controller.create()
-            except exceptions.HTTPException as e:
-                self.respond_json(code=e.status_code, data=e.detail)
-                return
-
-            serializer = ResourceTypeSerializer(res)
-            response_string = serializer.serialize()
-
-            self.respond_json(code=HTTPStatus.CREATED, data=response_string)
-            print(f"SUCCESS: sent {res}")
-
-        # url not found
-        else:
+        if not controller:  # url not found
             self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
             print(f"WARNING: 404 resource not found")
+
+        # call specific method handler
+        try:
+            res = controller.create()
+        except exceptions.HTTPException as e:
+            self.respond_json(code=e.status_code, data=e.detail)
+            return
+
+        # todo return instance instead of class
+        serializer = self.get_serializer()
+        serializer = serializer(res)
+        response_string = serializer.serialize()
+
+        self.respond_json(code=HTTPStatus.CREATED, data=response_string)
+        print(f"SUCCESS: sent {res}")
 
     def do_DELETE(self):
         # resources/

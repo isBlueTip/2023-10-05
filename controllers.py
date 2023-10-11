@@ -104,16 +104,24 @@ class ResourceTypeController(BaseDBController):
         return objs
 
     def create(self) -> ResourceType | None:
+        url = self.url_as_list()
+        if len(url) > 1:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "can't post to specific id")
+
         # validate request data
         if not self.request_json:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
+
         name = self.request_json.get("name")
         max_speed = self.request_json.get("max_speed")
 
-        if not name:
+        if name is None:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify name")
-        if not max_speed:
+
+        if max_speed is None:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify max_speed")
+        if isinstance(max_speed, str) and not max_speed.isnumeric():
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "max_speed has to be int")
         if int(max_speed) <= 0:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "max_speed can't be less than one")
 
@@ -230,19 +238,30 @@ class ResourceController(BaseDBController):
         return objs
 
     def create(self) -> Resource | None:
+        url = self.url_as_list()
+        if len(url) > 1:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "can't post to specific id")
+
         # validate request data
         if not self.request_json:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
+
         name = self.request_json.get("name")
         resource_type_id = self.request_json.get("resource_type_id")
         current_speed = self.request_json.get("current_speed")
 
-        if not name:
+        if name is None:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify name")
-        if not resource_type_id:
+
+        if resource_type_id is None:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify resource_type")
-        if not current_speed:
+        if isinstance(resource_type_id, str) and not resource_type_id.isnumeric():
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "resource_type_id has to be int")
+
+        if current_speed is None:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify current_speed")
+        if isinstance(current_speed, str) and not current_speed.isnumeric():
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "current_speed has to be int")
         if int(current_speed) < 0:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "current_speed can't be negative")
 
