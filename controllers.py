@@ -133,27 +133,38 @@ class ResourceTypeController(BaseDBController):
         return objs
 
     def update(self) -> ResourceType:
-        # validate request data
-        resource_type_id = self.path.split("/")[-1]
-        if not resource_type_id.isnumeric():  # not numeric argument
-            raise exceptions.NotFound(detail=f"{resource_type_id} not found")
-        resource_type_id = int(resource_type_id)
+        url = self.url_as_list()
 
+        # parse resource id
+        if len(url) > 1:
+            resource_type_id = url[1]
+            if not resource_type_id.isnumeric():  # not numeric argument
+                raise exceptions.NotFound(detail=f"{resource_type_id} not found")
+            resource_type_id = int(resource_type_id)
+
+        else:
+            raise exceptions.NotFound(detail=f"resource_type id not specified")
+
+        # validate request data
         if not self.request_json:
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
+            raise exceptions.BadRequest("request body contains no data")
+
         name = self.request_json.get("name")
         max_speed = self.request_json.get("max_speed")
-        if not any((name, max_speed)):
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "at least one attribute to change have to be specified")
 
-        # retrieve existing ResourceType object, update and send its data to db connection
+        if all((name is None, max_speed is None)):
+            raise exceptions.BadRequest("at least one attribute to change have to be specified")
+
+        # retrieve existing ResourceType object
         db_data = db.retrieve_records("resource_type", resource_type_id, None)
         if not db_data:
             raise exceptions.NotFound(detail=f"object with id = {resource_type_id} not found")
+
+        # update and send object data to db connection
         obj = ResourceType(name=db_data[0][1], max_speed=db_data[0][2])
-        if name:
+        if name is not None:
             obj.name = name
-        if max_speed:
+        if max_speed is not None:
             obj.max_speed = max_speed
 
         db.update_record("resource_type", resource_type_id, dataclasses.asdict(obj))
@@ -281,31 +292,41 @@ class ResourceController(BaseDBController):
         return objs
 
     def update(self) -> Resource:
-        # validate request data
-        resource_id = self.path.split("/")[-1]
-        if not resource_id.isnumeric():  # not numeric argument
-            raise exceptions.NotFound(detail=f"{resource_id} not found")
-        resource_id = int(resource_id)
+        url = self.url_as_list()
 
+        # parse resource id
+        if len(url) > 1:
+            resource_id = url[1]
+            if not resource_id.isnumeric():  # not numeric argument
+                raise exceptions.NotFound(detail=f"{resource_id} not found")
+            resource_id = int(resource_id)
+
+        else:
+            raise exceptions.NotFound(detail=f"resource id not specified")
+
+        # validate request data
         if not self.request_json:
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
+            raise exceptions.BadRequest("request body contains no data")
+
         name = self.request_json.get("name")
         resource_type_id = self.request_json.get("resource_type_id")
         current_speed = self.request_json.get("current_speed")
-        if not any((name, resource_type_id, current_speed)):
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "at least one attribute to change have to be specified")
 
-        # retrieve existing ResourceType object, update and send its data to db connection
+        if all((name is None, resource_type_id is None, current_speed is None)):
+            raise exceptions.BadRequest("at least one attribute to change have to be specified")
+
+        # retrieve existing Resource object
         db_data = db.retrieve_records("resource", resource_id, None)
         if not db_data:
             raise exceptions.NotFound(detail=f"object with id = {resource_id} not found")
 
+        # update and send object data to db connection
         obj = Resource(name=db_data[0][1], resource_type_id=db_data[0][2], current_speed=db_data[0][3])
-        if name:
+        if name is not None:
             obj.name = name
-        if resource_type_id:
+        if resource_type_id is not None:
             obj.resource_type_id = resource_type_id
-        if current_speed or current_speed == 0:
+        if current_speed is not None:
             obj.current_speed = current_speed
 
         data = dataclasses.asdict(obj)
