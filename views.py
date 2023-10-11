@@ -3,9 +3,6 @@ import json
 from abc import ABC, abstractmethod
 from typing import List
 
-from ipdb import set_trace
-
-import exceptions
 from db.db_adapter import DBAdapter
 from db.models import Resource, ResourceType
 

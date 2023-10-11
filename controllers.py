@@ -16,13 +16,10 @@ db = DatabaseAccess(
     db_name=Config.DB_NAME,
     username=Config.DB_USERNAME,
     password=Config.DB_PASSWORD,
-    host=Config.DB_HOST,
-    # host='db',
+    # host=Config.DB_HOST,
+    host='db',
     port=Config.DB_PORT,
 )
-
-# TODO CONTROLLERS PARSE DATA TO DATACLASS AND CALL SERVICE
-# TODO SERVICE SENDS DATACLASS DATA TO DB AND CALL REQUIRED METHOD OF DB
 
 
 class BaseDBController(ABC):
