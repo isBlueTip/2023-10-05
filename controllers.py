@@ -20,21 +20,24 @@ db = DatabaseAccess(
 class BaseDBController(ABC):
     def __init__(
         self,
+        # parsed_url,
         path: str,  # request path
         req_body: dict | None = None,  # data from post if exist
         url_params: dict | None = None,  # data from url - filter, anything else?
     ):
+        # self.parsed_url = parsed_url
         self.path = path
-        self.req_body = req_body
+        self.request_json = req_body
         self.url_params = url_params
+
+        # check if db tables exist init and populate if not
         self.init_tables()
 
     @staticmethod
     def init_tables() -> None:
         with db.connect() as conn:
             cur = conn.cursor()
-            cur.execute(  # check if tables in db already exist
-                """
+            query = """
             SELECT 
               EXISTS (
                 SELECT 
@@ -43,8 +46,8 @@ class BaseDBController(ABC):
                 WHERE 
                   table_name = 'resource_type'
               );
-                   """
-            )
+               """
+            cur.execute(query)  # check if tables in db already exist
             exists = cur.fetchone()[0]
             cur.close()
         if not exists:  # create tables if not exist
@@ -92,10 +95,10 @@ class ResourceTypeController(BaseDBController):
 
     def create(self) -> ResourceType | None:
         # validate request data
-        if not self.req_body:
+        if not self.request_json:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
-        name = self.req_body.get("name")
-        max_speed = self.req_body.get("max_speed")
+        name = self.request_json.get("name")
+        max_speed = self.request_json.get("max_speed")
 
         if not name:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify name")
@@ -118,10 +121,10 @@ class ResourceTypeController(BaseDBController):
             raise exceptions.NotFound(detail=f"{resource_type_id} not found")
         resource_type_id = int(resource_type_id)
 
-        if not self.req_body:
+        if not self.request_json:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
-        name = self.req_body.get("name")
-        max_speed = self.req_body.get("max_speed")
+        name = self.request_json.get("name")
+        max_speed = self.request_json.get("max_speed")
         if not any((name, max_speed)):
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "at least one attribute to change have to be specified")
 
@@ -214,11 +217,11 @@ class ResourceController(BaseDBController):
 
     def create(self) -> Resource | None:
         # validate request data
-        if not self.req_body:
+        if not self.request_json:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
-        name = self.req_body.get("name")
-        resource_type_id = self.req_body.get("resource_type_id")
-        current_speed = self.req_body.get("current_speed")
+        name = self.request_json.get("name")
+        resource_type_id = self.request_json.get("resource_type_id")
+        current_speed = self.request_json.get("current_speed")
 
         if not name:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify name")
@@ -245,11 +248,11 @@ class ResourceController(BaseDBController):
             raise exceptions.NotFound(detail=f"{resource_id} not found")
         resource_id = int(resource_id)
 
-        if not self.req_body:
+        if not self.request_json:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
-        name = self.req_body.get("name")
-        resource_type_id = self.req_body.get("resource_type_id")
-        current_speed = self.req_body.get("current_speed")
+        name = self.request_json.get("name")
+        resource_type_id = self.request_json.get("resource_type_id")
+        current_speed = self.request_json.get("current_speed")
         if not any((name, resource_type_id, current_speed)):
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "at least one attribute to change have to be specified")
 

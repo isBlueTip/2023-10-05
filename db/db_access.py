@@ -158,6 +158,7 @@ class DatabaseAccess:
             );
              """
             cur.execute(query)
+
             conn.commit()
             cur.close()
 
