@@ -132,7 +132,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # call specific method handler
         try:
-            res = controller.get()
+            res = controller.retrieve()
         except exceptions.HTTPException as e:
             self.respond_json(code=e.status_code, data=f"{e.detail}")
             return
@@ -167,6 +167,28 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.respond_json(code=HTTPStatus.CREATED, data=response_string)
         print(f"SUCCESS: sent {res}")
 
+    def do_PATCH(self):
+        controller = self.get_controller()
+
+        if not controller:  # url not found
+            self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
+            print(f"WARNING: 404 resource not found")
+
+        # call specific method handler
+        try:
+            res = controller.update()
+        except exceptions.HTTPException as e:
+            self.respond_json(code=e.status_code, data=e.detail)
+            return
+
+        # todo return instance instead of class
+        serializer = self.get_serializer()
+        serializer = serializer(res)
+        response_string = serializer.serialize()
+
+        self.respond_json(code=HTTPStatus.CREATED, data=response_string)
+        print(f"SUCCESS: {res} updated")
+
     def do_DELETE(self):
         controller = self.get_controller()
 
@@ -183,44 +205,6 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         self.respond_json(code=HTTPStatus.NO_CONTENT, data="")
         print(f"SUCCESS: deleted")
-
-    def do_PATCH(self):
-        # resources/
-        if self.path.startswith("/resources"):
-            controller = ResourceController(
-                path=self.path,
-                request_json=self.request_json,
-                url_params=self.url_params,
-            )
-            try:
-                controller.update()
-            except exceptions.HTTPException as e:
-                self.respond_json(code=e.status_code, data=e.detail)
-                return
-
-            self.respond_json(code=HTTPStatus.CREATED, data="")
-            print(f"SUCCESS: resource updated")
-
-        # resource_types/
-        elif self.path.startswith("/resource_types"):
-            controller = ResourceTypeController(
-                path=self.path,
-                request_json=self.request_json,
-                url_params=self.url_params,
-            )
-            try:
-                controller.update()
-            except exceptions.HTTPException as e:
-                self.respond_json(code=e.status_code, data=e.detail)
-                return
-
-            self.respond_json(code=HTTPStatus.CREATED, data="")
-            print(f"SUCCESS: resource_type updated")
-
-        # url not found
-        else:
-            self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
-            print(f"WARNING: 404 resource not found")
 
 
 def create_app():
