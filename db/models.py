@@ -15,7 +15,7 @@ class Resource:
     name: str
     resource_type_id: int
     current_speed: int
-    speed_exceeding_percentage: int | None = None
+    # speed_exceeding_percentage: int | None = None
 
     def __str__(self):
         return f"{self.name}"

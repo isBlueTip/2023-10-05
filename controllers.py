@@ -1,10 +1,14 @@
 import dataclasses
 import http
 from abc import ABC, abstractmethod
+from typing import List
+
+from ipdb import set_trace
 
 import exceptions
 from config import Config
 from db.db_access import DatabaseAccess
+from db.db_adapter import DBAdapter
 from db.models import Resource, ResourceType
 from exceptions import HTTPException
 
@@ -12,8 +16,8 @@ db = DatabaseAccess(
     db_name=Config.DB_NAME,
     username=Config.DB_USERNAME,
     password=Config.DB_PASSWORD,
-    # host=Config.DB_HOST,
-    host='db',
+    host=Config.DB_HOST,
+    # host='db',
     port=Config.DB_PORT,
 )
 
@@ -107,31 +111,24 @@ class ResourceTypeController(BaseDBController):
 
         return obj
 
-    def retrieve(self) -> ResourceType:
+    def retrieve(self) -> List[ResourceType]:
         url = self.url_as_list()
 
         # parse resource_type id
+        resource_type_id = None
         if len(url) > 1:
             resource_type_id = url[1]
-
             if not resource_type_id.isnumeric():  # not numeric argument
-                raise exceptions.NotFound(detail=f"{resource_type_id} not found")
-
+                raise exceptions.NotFound(detail=f"resource_type id has to be int")
             resource_type_id = int(resource_type_id)
-        else:
-            resource_type_id = None
 
-        db_data = db.retrieve_records("resource_type", resource_type_id, None)
-        objs = []
-        if resource_type_id:  # single instance
-            if not db_data:
-                raise exceptions.NotFound(detail=f"object with id = {resource_type_id} not found")
-            objs = ResourceType(name=db_data[0][1], max_speed=db_data[0][2])
-        else:  # multiple instances
-            for obj in db_data:
-                print(f"obj = {obj}")
-                objs.append(ResourceType(name=obj[1], max_speed=obj[2]))
-        return objs
+        # create filtering data
+        filtering_data = {}
+
+        adapter = DBAdapter()
+        resource_types = adapter.retrieve(ResourceType, "resource_type", resource_type_id, filtering_data)
+
+        return resource_types
 
     def update(self) -> ResourceType:
         url = self.url_as_list()
@@ -231,66 +228,35 @@ class ResourceController(BaseDBController):
 
         return obj
 
-    def retrieve(self) -> Resource:
+    def retrieve(self) -> List[Resource]:
         url = self.url_as_list()
 
         # parse resource id
+        resource_id = None
         if len(url) > 1:
             resource_id = url[-1]
-
             if not resource_id.isnumeric():  # not numeric argument
-                raise exceptions.NotFound(detail=f"{resource_id} not found")
-
+                raise exceptions.NotFound(detail=f"resource id has to be int")
             resource_id = int(resource_id)
-        else:
-            resource_id = None
 
         # parse filtering params
-        type_ids = self.url_params.get("type")
+        raw_type_ids = self.url_params.get("type")
 
-        if type_ids:
-            type_ids = type_ids[0].split(",")
+        # create filtering data
+        filtering_data = {}
+        if raw_type_ids:
+            type_ids = raw_type_ids[0].split(",")
             try:
                 type_ids = tuple(map(int, type_ids))
             except ValueError:
                 raise exceptions.BadRequest(detail=f"wrong type url parameters")
-            filtering_data = {"type_id": type_ids}
-        else:
-            filtering_data = {}
-        db_data = db.retrieve_records("resource", resource_id, filtering_data)
-        objs = []
-        if resource_id:  # single instance
-            if not db_data:
-                raise exceptions.NotFound(detail=f"object with id = {resource_id} not found")
-            name = db_data[0][1]
-            resource_type_id = db_data[0][2]
-            current_speed = db_data[0][3]
-            res_type = db.retrieve_records("resource_type", resource_type_id, None)[0]
-            max_speed = res_type[2]
-            speed_exceeding = int((current_speed / max_speed - 1) * 100) if current_speed > max_speed else 0
-            objs = Resource(
-                name=name,
-                resource_type_id=resource_type_id,
-                current_speed=current_speed,
-                speed_exceeding_percentage=speed_exceeding,
-            )
-        else:  # multiple instances
-            for obj in db_data:
-                name = obj[1]
-                resource_type_id = obj[2]
-                current_speed = obj[3]
-                res_type = db.retrieve_records("resource_type", resource_type_id, None)[0]
-                max_speed = res_type[2]
-                speed_exceeding = int((current_speed / max_speed - 1) * 100) if current_speed > max_speed else 0
-                objs.append(
-                    Resource(
-                        name=name,
-                        resource_type_id=resource_type_id,
-                        current_speed=current_speed,
-                        speed_exceeding_percentage=speed_exceeding,
-                    )
-                )
-        return objs
+            else:
+                filtering_data["type_id"] = type_ids
+
+        adapter = DBAdapter()
+        resources = adapter.retrieve(Resource, "resource", resource_id, filtering_data)
+
+        return resources
 
     def update(self) -> Resource:
         url = self.url_as_list()
