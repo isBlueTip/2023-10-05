@@ -1,10 +1,8 @@
-# more repeating controllers code
+# move out repeating controllers code
 # separate each controller's code by functionality (for ex., validate)
 # another db access layer - services, accept Python types
 # catch errors from db connection, add more details and pass it further to more specific http errors
 # add proper validation as models methods and use everywhere
-
-# Не хватило времени разобраться с запуском в контейнере, приложение из контейнера не видит БД
 
 import asyncio
 import json

@@ -12,7 +12,8 @@ db = DatabaseAccess(
     db_name=Config.DB_NAME,
     username=Config.DB_USERNAME,
     password=Config.DB_PASSWORD,
-    host=Config.DB_HOST,
+    # host=Config.DB_HOST,
+    host='db',
     port=Config.DB_PORT,
 )
 
