@@ -1,6 +1,5 @@
 # move out repeating controllers code
-# separate each controller's code by functionality (for ex., validate)
-# another db access layer - services, accept Python types
+# another db access layer - adapters, accept and return Python types
 # catch errors from db connection, add more details and pass it further to more specific http errors
 # add proper validation as models methods and use everywhere
 
