@@ -91,25 +91,18 @@ class ResourceTypeController(BaseDBController):
         if not self.request_json:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
 
-        name = self.request_json.get("name")
-        max_speed = self.request_json.get("max_speed")
-
-        if name is None:
+        if (name := self.request_json.get("name")) is None:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify name")
-
-        if max_speed is None:
+        if (max_speed := self.request_json.get("max_speed")) is None:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify max_speed")
-        if isinstance(max_speed, str) and not max_speed.isnumeric():
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "max_speed has to be int")
-        if int(max_speed) <= 0:
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "max_speed can't be less than one")
 
-        # create ResourceType object and send its data to db connection
-        obj = ResourceType(name=name, max_speed=max_speed)
+        # create ResourceType object and send its data to db adapter
+        resource_type = ResourceType(name=name, max_speed=max_speed)
 
-        db.create_record("resource_type", dataclasses.asdict(obj))
+        adapter = DBAdapter()
+        result = adapter.create(resource_type, "resource_type")
 
-        return obj
+        return result
 
     def retrieve(self) -> List[ResourceType]:
         url = self.url_as_list()
@@ -200,33 +193,20 @@ class ResourceController(BaseDBController):
         if not self.request_json:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "request body contains no data")
 
-        name = self.request_json.get("name")
-        resource_type_id = self.request_json.get("resource_type_id")
-        current_speed = self.request_json.get("current_speed")
-
-        if name is None:
+        if (name := self.request_json.get("name")) is None:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify name")
-
-        if resource_type_id is None:
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify resource_type")
-        if isinstance(resource_type_id, str) and not resource_type_id.isnumeric():
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "resource_type_id has to be int")
-
-        if current_speed is None:
+        if (resource_type_id := self.request_json.get("resource_type_id")) is None:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify resource_type_id")
+        if (current_speed := self.request_json.get("current_speed")) is None:
             raise HTTPException(http.HTTPStatus.BAD_REQUEST, "you have to specify current_speed")
-        if isinstance(current_speed, str) and not current_speed.isnumeric():
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "current_speed has to be int")
-        if int(current_speed) < 0:
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "current_speed can't be negative")
 
-        # create Resource object and send its data to db connection
-        obj = Resource(name=name, resource_type_id=resource_type_id, current_speed=current_speed)
+        # create Resource object and send its data to db adapter
+        resource = Resource(name=name, resource_type_id=resource_type_id, current_speed=current_speed)
 
-        obj_data = dataclasses.asdict(obj)
-        obj_data.pop("speed_exceeding_percentage")
-        db.create_record("resource", obj_data)
+        adapter = DBAdapter()
+        result = adapter.create(resource, "resource")
 
-        return obj
+        return result
 
     def retrieve(self) -> List[Resource]:
         url = self.url_as_list()

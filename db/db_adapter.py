@@ -1,3 +1,4 @@
+import dataclasses
 from abc import ABC, abstractmethod
 from pprint import pprint
 from typing import List
@@ -22,9 +23,9 @@ class BaseDBAdapter(ABC):
             port=Config.DB_PORT,
         )
 
-    # @abstractmethod
-    # def create(self):
-    #     pass
+    @abstractmethod
+    def create(self, obj, table_name: str):
+        pass
 
     @abstractmethod
     def retrieve(self, obj_class, table_name: str, obj_id: int | None, filtering_data: dict | None):
@@ -40,6 +41,11 @@ class BaseDBAdapter(ABC):
 
 
 class DBAdapter(BaseDBAdapter):
+    def create(self, obj, table_name: str):
+        # TODO obj.validate(), but here or in controller?
+        self.db.create_record(table_name, dataclasses.asdict(obj))
+        return obj
+
     def retrieve(self, obj_class, table_name: str, obj_id: int | None, filtering_data: dict | None):
         db_data = self.db.retrieve_records(table_name, obj_id, filtering_data)
         objs = []
@@ -54,13 +60,8 @@ class DBAdapter(BaseDBAdapter):
             for i in range(1, attrs_num + 1):
                 attrs.append(record[i])
 
-            # TODO move to view!
-            # res_type = self.db.retrieve_records("resource_type", resource_type_id, None)[0]
-            # max_speed = res_type[2]
-            # speed_exceeding = int((current_speed / max_speed - 1) * 100) if current_speed > max_speed else 0
-            # resource = Resource(name=name, resource_type_id=resource_type_id, current_speed=current_speed,)
             obj = obj_class(*attrs)
-            # TODO obj_class.validate()
+            # TODO obj_class.validate(), but it is from DB so do I need it?
             objs.append(obj)
 
         return objs
