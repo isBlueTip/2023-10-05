@@ -168,42 +168,21 @@ class RequestHandler(BaseHTTPRequestHandler):
         print(f"SUCCESS: sent {res}")
 
     def do_DELETE(self):
-        # resources/
-        if self.path.startswith("/resources"):
-            controller = ResourceController(
-                path=self.path,
-                request_json=self.request_json,
-                url_params=self.url_params,
-            )
-            try:
-                controller.delete()
-            except exceptions.HTTPException as e:
-                self.respond_json(code=e.status_code, data=e.detail)
-                return
+        controller = self.get_controller()
 
-            self.respond_json(code=HTTPStatus.NO_CONTENT, data="")
-            print(f"SUCCESS: deleted")
-
-        # resource_types/
-        elif self.path.startswith("/resource_types"):
-            controller = ResourceTypeController(
-                path=self.path,
-                request_json=self.request_json,
-                url_params=self.url_params,
-            )
-            try:
-                controller.delete()
-            except exceptions.HTTPException as e:
-                self.respond_json(code=e.status_code, data=e.detail)
-                return
-
-            self.respond_json(code=HTTPStatus.NO_CONTENT, data="")
-            print(f"SUCCESS: deleted")
-
-        # url not found
-        else:
+        if not controller:  # url not found
             self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
             print(f"WARNING: 404 resource not found")
+
+        # call specific method handler
+        try:
+            controller.delete()
+        except exceptions.HTTPException as e:
+            self.respond_json(code=e.status_code, data=e.detail)
+            return
+
+        self.respond_json(code=HTTPStatus.NO_CONTENT, data="")
+        print(f"SUCCESS: deleted")
 
     def do_PATCH(self):
         # resources/

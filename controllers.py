@@ -161,16 +161,22 @@ class ResourceTypeController(BaseDBController):
         return obj
 
     def delete(self) -> None:
+        url = self.url_as_list()
+        if len(url) > 1:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "specify id for deletion as in '?id=x,y'")
+
         # parse ids
         resource_type_ids = self.url_params.get("id")
         if not resource_type_ids:
-            raise exceptions.BadRequest(detail=f"wrong id parameters")
-
+            raise exceptions.BadRequest(detail="specify id for deletion as in '?id=x,y'")
         resource_type_ids = resource_type_ids[0].split(",")
+
+        # validate ids
         try:
             resource_type_ids = tuple(map(int, resource_type_ids))
         except ValueError:
-            raise exceptions.BadRequest(detail=f"wrong id parameters")
+            raise exceptions.BadRequest(detail=f"wrong id parameters, awaiting ints")
+
         db.delete_records("resource_type", resource_type_ids)
         return
 
@@ -309,15 +315,19 @@ class ResourceController(BaseDBController):
         return obj
 
     def delete(self) -> None:
+        url = self.url_as_list()
+        if len(url) > 1:
+            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "specify id for deletion as in '?id=x,y'")
+
         # parse ids
         resource_ids = self.url_params.get("id")
         if not resource_ids:
-            raise exceptions.BadRequest(detail=f"wrong id parameters")
-
+            raise exceptions.BadRequest(detail="specify id for deletion as in '?id=x,y'")
         resource_ids = resource_ids[0].split(",")
+
         try:
             resource_ids = tuple(map(int, resource_ids))
         except ValueError:
-            raise exceptions.BadRequest(detail=f"wrong id parameters")
+            raise exceptions.BadRequest(detail=f"wrong id parameters, awaiting ints")
         db.delete_records("resource", resource_ids)
         return
