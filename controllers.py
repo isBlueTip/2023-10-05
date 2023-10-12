@@ -17,7 +17,7 @@ db = DatabaseAccess(
     username=Config.DB_USERNAME,
     password=Config.DB_PASSWORD,
     # host=Config.DB_HOST,
-    host='db',
+    host="db",
     port=Config.DB_PORT,
 )
 
@@ -163,13 +163,13 @@ class ResourceTypeController(BaseDBController):
     def delete(self) -> None:
         url = self.url_as_list()
         if len(url) > 1:
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "specify id for deletion as in '?id=x,y'")
+            raise exceptions.BadRequest("specify id for deletion as in '?id=x,y'")
 
         # parse ids
-        resource_type_ids = self.url_params.get("id")
-        if not resource_type_ids:
+        raw_ids = self.url_params.get("id")
+        if not raw_ids:
             raise exceptions.BadRequest(detail="specify id for deletion as in '?id=x,y'")
-        resource_type_ids = resource_type_ids[0].split(",")
+        resource_type_ids = raw_ids[0].split(",")
 
         # validate ids
         try:
@@ -177,7 +177,9 @@ class ResourceTypeController(BaseDBController):
         except ValueError:
             raise exceptions.BadRequest(detail=f"wrong id parameters, awaiting ints")
 
-        db.delete_records("resource_type", resource_type_ids)
+        adapter = DBAdapter()
+
+        adapter.delete("resource_type", resource_type_ids)
         return
 
 
@@ -282,17 +284,21 @@ class ResourceController(BaseDBController):
     def delete(self) -> None:
         url = self.url_as_list()
         if len(url) > 1:
-            raise HTTPException(http.HTTPStatus.BAD_REQUEST, "specify id for deletion as in '?id=x,y'")
+            raise exceptions.BadRequest("specify id for deletion as in '?id=x,y'")
 
         # parse ids
-        resource_ids = self.url_params.get("id")
-        if not resource_ids:
+        raw_ids = self.url_params.get("id")
+        if not raw_ids:
             raise exceptions.BadRequest(detail="specify id for deletion as in '?id=x,y'")
-        resource_ids = resource_ids[0].split(",")
+        resource_ids = raw_ids[0].split(",")
 
+        # validate ids
         try:
             resource_ids = tuple(map(int, resource_ids))
         except ValueError:
             raise exceptions.BadRequest(detail=f"wrong id parameters, awaiting ints")
-        db.delete_records("resource", resource_ids)
+
+        adapter = DBAdapter()
+
+        adapter.delete("resource", resource_ids)
         return

@@ -1,7 +1,7 @@
 import dataclasses
 from abc import ABC, abstractmethod
 from pprint import pprint
-from typing import List
+from typing import List, Tuple
 
 from ipdb import set_trace
 
@@ -19,7 +19,7 @@ class BaseDBAdapter(ABC):
             username=Config.DB_USERNAME,
             password=Config.DB_PASSWORD,
             # host=Config.DB_HOST,
-            host='db',
+            host="db",
             port=Config.DB_PORT,
         )
 
@@ -35,9 +35,9 @@ class BaseDBAdapter(ABC):
     def update(self, obj, table_name: str, obj_id: int | None):
         pass
 
-    # @abstractmethod
-    # def delete(self):
-    #     pass
+    @abstractmethod
+    def delete(self):
+        pass
 
 
 class DBAdapter(BaseDBAdapter):
@@ -61,12 +61,15 @@ class DBAdapter(BaseDBAdapter):
                 attrs.append(record[i])
 
             obj = obj_class(*attrs)
-            # TODO obj_class.validate(), but it is from DB so do I need it?
+            # TODO obj_class.validate(), but data is from DB so do I need to validate?
             objs.append(obj)
 
         return objs
 
-    def update(self, obj, table_name: str, obj_id: int | None):
+    def update(self, obj, table_name: str, obj_id: int):
         self.db.update_record(table_name, obj_id, dataclasses.asdict(obj))
 
         return obj
+
+    def delete(self, table_name: str, obj_ids: Tuple[int]):
+        self.db.delete_records(table_name, obj_ids)

@@ -120,8 +120,8 @@ class DatabaseAccess:
             cur.close()
         return res
 
-    def delete_records(self, table_name: str, obj_ids: int | Tuple[int]):
-        if len(obj_ids) == 1:  # add bracket for single object
+    def delete_records(self, table_name: str, obj_ids: Tuple[int]):
+        if len(obj_ids) == 1:  # create string for single object in the tuple
             obj_ids = f"({obj_ids[0]})"
         query = f"""
                 DELETE
