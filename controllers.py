@@ -120,16 +120,15 @@ class ResourceTypeController(BaseDBController):
 
         return resource_types
 
-    def update(self) -> ResourceType:
+    def update(self) -> List[ResourceType]:
         url = self.url_as_list()
 
-        # parse resource id
+        # parse resource_type id
         if len(url) > 1:
             resource_type_id = url[1]
             if not resource_type_id.isnumeric():  # not numeric argument
                 raise exceptions.NotFound(detail=f"{resource_type_id} not found")
             resource_type_id = int(resource_type_id)
-
         else:
             raise exceptions.NotFound(detail=f"resource_type id not specified")
 
@@ -143,21 +142,23 @@ class ResourceTypeController(BaseDBController):
         if all((name is None, max_speed is None)):
             raise exceptions.BadRequest("at least one attribute to change have to be specified")
 
+        # create filtering data
+        filtering_data = {}
+
+        adapter = DBAdapter()
+
         # retrieve existing ResourceType object
-        db_data = db.retrieve_records("resource_type", resource_type_id, None)
-        if not db_data:
-            raise exceptions.NotFound(detail=f"object with id = {resource_type_id} not found")
+        resource_type = adapter.retrieve(ResourceType, "resource_type", resource_type_id, filtering_data)[0]
 
         # update and send object data to db connection
-        obj = ResourceType(name=db_data[0][1], max_speed=db_data[0][2])
         if name is not None:
-            obj.name = name
+            resource_type.name = name
         if max_speed is not None:
-            obj.max_speed = max_speed
+            resource_type.max_speed = max_speed
 
-        db.update_record("resource_type", resource_type_id, dataclasses.asdict(obj))
+        adapter.update(resource_type, "resource_type", resource_type_id)
 
-        return obj
+        return [resource_type]
 
     def delete(self) -> None:
         url = self.url_as_list()
@@ -235,7 +236,7 @@ class ResourceController(BaseDBController):
 
         return resources
 
-    def update(self) -> Resource:
+    def update(self) -> List[Resource]:
         url = self.url_as_list()
 
         # parse resource id
@@ -244,7 +245,6 @@ class ResourceController(BaseDBController):
             if not resource_id.isnumeric():  # not numeric argument
                 raise exceptions.NotFound(detail=f"{resource_id} not found")
             resource_id = int(resource_id)
-
         else:
             raise exceptions.NotFound(detail=f"resource id not specified")
 
@@ -259,25 +259,25 @@ class ResourceController(BaseDBController):
         if all((name is None, resource_type_id is None, current_speed is None)):
             raise exceptions.BadRequest("at least one attribute to change have to be specified")
 
+        # create filtering data
+        filtering_data = {}
+
+        adapter = DBAdapter()
+
         # retrieve existing Resource object
-        db_data = db.retrieve_records("resource", resource_id, None)
-        if not db_data:
-            raise exceptions.NotFound(detail=f"object with id = {resource_id} not found")
+        resource = adapter.retrieve(Resource, "resource", resource_id, filtering_data)[0]
 
         # update and send object data to db connection
-        obj = Resource(name=db_data[0][1], resource_type_id=db_data[0][2], current_speed=db_data[0][3])
         if name is not None:
-            obj.name = name
+            resource.name = name
         if resource_type_id is not None:
-            obj.resource_type_id = resource_type_id
+            resource.resource_type_id = resource_type_id
         if current_speed is not None:
-            obj.current_speed = current_speed
+            resource.current_speed = current_speed
 
-        data = dataclasses.asdict(obj)
-        data.pop("speed_exceeding_percentage")
-        db.update_record("resource", resource_id, data)
+        adapter.update(resource, "resource", resource_id)
 
-        return obj
+        return [resource]
 
     def delete(self) -> None:
         url = self.url_as_list()

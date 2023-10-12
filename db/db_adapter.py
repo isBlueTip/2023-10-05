@@ -31,10 +31,10 @@ class BaseDBAdapter(ABC):
     def retrieve(self, obj_class, table_name: str, obj_id: int | None, filtering_data: dict | None):
         pass
 
-    # @abstractmethod
-    # def update(self):
-    #     pass
-    #
+    @abstractmethod
+    def update(self, obj, table_name: str, obj_id: int | None):
+        pass
+
     # @abstractmethod
     # def delete(self):
     #     pass
@@ -65,3 +65,8 @@ class DBAdapter(BaseDBAdapter):
             objs.append(obj)
 
         return objs
+
+    def update(self, obj, table_name: str, obj_id: int | None):
+        self.db.update_record(table_name, obj_id, dataclasses.asdict(obj))
+
+        return obj
