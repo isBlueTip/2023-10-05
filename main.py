@@ -1,5 +1,4 @@
 # move out repeating controllers code
-# another db access layer - adapters, accept and return Python types
 # catch errors from db connection, add more details and pass it further to more specific http errors
 # add proper validation as models methods and use everywhere
 
@@ -7,11 +6,8 @@ import asyncio
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from pprint import pprint
 from typing import List
 from urllib.parse import parse_qs, urlparse
-
-from ipdb import set_trace
 
 import exceptions
 from controllers import ResourceController, ResourceTypeController
@@ -131,8 +127,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
             print(f"WARNING: 404 resource not found")
 
-        # call specific method handler
-        try:
+        try:  # call specific method handler
             data = controller.retrieve()
         except exceptions.HTTPException as e:
             self.respond_json(code=e.status_code, data=f"{e.detail}")
@@ -151,8 +146,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
             print(f"WARNING: 404 resource not found")
 
-        # call specific method handler
-        try:
+        try:  # call specific method handler
             data = controller.create()
         except exceptions.HTTPException as e:
             self.respond_json(code=e.status_code, data=e.detail)
@@ -171,8 +165,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
             print(f"WARNING: 404 resource not found")
 
-        # call specific method handler
-        try:
+        try:  # call specific method handler
             data = controller.update()
         except exceptions.HTTPException as e:
             self.respond_json(code=e.status_code, data=e.detail)
@@ -191,8 +184,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.respond_json(code=HTTPStatus.NOT_FOUND, data="resource not found")
             print(f"WARNING: 404 resource not found")
 
-        # call specific method handler
-        try:
+        try:  # call specific method handler
             controller.delete()
         except exceptions.HTTPException as e:
             self.respond_json(code=e.status_code, data=e.detail)

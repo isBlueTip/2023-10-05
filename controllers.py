@@ -1,25 +1,11 @@
-import dataclasses
 import http
 from abc import ABC, abstractmethod
 from typing import List
 
-from ipdb import set_trace
-
 import exceptions
-from config import Config
-from db.db_access import DatabaseAccess
 from db.db_adapter import DBAdapter
 from db.models import Resource, ResourceType
 from exceptions import HTTPException
-
-db = DatabaseAccess(
-    db_name=Config.DB_NAME,
-    username=Config.DB_USERNAME,
-    password=Config.DB_PASSWORD,
-    # host=Config.DB_HOST,
-    host="db",
-    port=Config.DB_PORT,
-)
 
 
 class BaseDBController(ABC):
@@ -32,31 +18,6 @@ class BaseDBController(ABC):
         self.url = url
         self.request_json = request_json
         self.url_params = url_params
-
-        # TODO move closer to DB
-        # check if db tables exist init and populate if not
-        self.init_tables()
-
-    @staticmethod
-    def init_tables() -> None:
-        with db.connect() as conn:
-            cur = conn.cursor()
-            query = """
-            SELECT 
-              EXISTS (
-                SELECT 
-                FROM 
-                  information_schema.tables 
-                WHERE 
-                  table_name = 'resource_type'
-              );
-               """
-            cur.execute(query)  # check if tables in db already exist
-            exists = cur.fetchone()[0]
-            cur.close()
-        if not exists:  # create tables if not exist
-            db.create_tables()
-            db.insert_fixtures()
 
     @abstractmethod
     def create(self):

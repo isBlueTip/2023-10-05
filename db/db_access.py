@@ -141,7 +141,7 @@ class DatabaseAccess:
             cur.close()
         return
 
-    def create_tables(self) -> None:
+    def _create_tables(self) -> None:
         with self.connect() as conn:
             cur = conn.cursor()
             query = """
@@ -162,7 +162,7 @@ class DatabaseAccess:
             conn.commit()
             cur.close()
 
-    def insert_fixtures(self) -> None:
+    def _insert_fixtures(self) -> None:
         types = [
             {"name": "loader", "max_speed": 50},
             {"name": "excavator", "max_speed": 40},

@@ -1,15 +1,11 @@
 import dataclasses
 from abc import ABC, abstractmethod
-from pprint import pprint
-from typing import List, Tuple
-
-from ipdb import set_trace
+from typing import Tuple
 
 import exceptions
 from config import Config
 
 from .db_access import DatabaseAccess
-from .models import Resource, ResourceType
 
 
 class BaseDBAdapter(ABC):
@@ -22,6 +18,30 @@ class BaseDBAdapter(ABC):
             host="db",
             port=Config.DB_PORT,
         )
+
+        # check if db tables exist; init and populate if not
+        self.init_tables()
+
+    def init_tables(self) -> None:
+        with self.db.connect() as conn:
+            cur = conn.cursor()
+            query = """
+            SELECT 
+              EXISTS (
+                SELECT 
+                FROM 
+                  information_schema.tables 
+                WHERE 
+                  table_name = 'resource_type'
+              );
+               """
+            cur.execute(query)  # check if tables in db already exist
+            exists = cur.fetchone()[0]
+            cur.close()
+
+        if not exists:  # create and populate tables if not exist
+            self.db._create_tables()
+            self.db._insert_fixtures()
 
     @abstractmethod
     def create(self, obj, table_name: str):
@@ -36,13 +56,12 @@ class BaseDBAdapter(ABC):
         pass
 
     @abstractmethod
-    def delete(self):
+    def delete(self, table_name: str, obj_ids: Tuple[int]):
         pass
 
 
 class DBAdapter(BaseDBAdapter):
     def create(self, obj, table_name: str):
-        # TODO obj.validate(), but here or in controller?
         self.db.create_record(table_name, dataclasses.asdict(obj))
         return obj
 
@@ -61,7 +80,6 @@ class DBAdapter(BaseDBAdapter):
                 attrs.append(record[i])
 
             obj = obj_class(*attrs)
-            # TODO obj_class.validate(), but data is from DB so do I need to validate?
             objs.append(obj)
 
         return objs
